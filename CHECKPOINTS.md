@@ -42,7 +42,7 @@
 - [ ] OpenAPI-first pipeline (`oapi-codegen` server stubs + generated TS client)
 - [ ] Docker images, compose for local, deploy manifests Kubernetes-compatible
 - [ ] Reverse proxy (Caddy or Traefik) with blue/green rollout, readiness and liveness probes, graceful shutdown
-- [ ] TLS hybrid PQ key exchange (X25519MLKEM768) verified by an automated handshake test
+- [x] TLS hybrid PQ key exchange (X25519MLKEM768) verified by an automated handshake test
 - [ ] `cryptokit` skeleton (versioned envelope header: alg, kid, version)
 - [ ] OpenTelemetry + slog + Sentry; trace ID in logs
 - [ ] CI: lint, unit, integration (Testcontainers), migration lint, OpenAPI diff, govulncheck, npm audit, Trivy, build, deploy
