@@ -49,6 +49,8 @@ jobs:
         run: pnpm typecheck
       - name: Build
         run: pnpm build
+      - name: Build frontend container image
+        run: make images-web
 
   backend:
     name: Backend quality gates
@@ -143,3 +145,7 @@ jobs:
       - name: Test
         working-directory: services/api
         run: go test ./...
+      - name: Build backend container images
+        run: make images-backend
+      - name: Validate Kubernetes manifests
+        run: make k8s-build

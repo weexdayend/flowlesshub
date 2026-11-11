@@ -1,4 +1,4 @@
-.PHONY: api-run worker-run api-test api-vet api-fmt migrate-run db-up db-down river-migrate-up river-migrate-down sqlc openapi-go openapi-ts arch-lint db-lint
+.PHONY: api-run worker-run api-test api-vet api-fmt migrate-run db-up db-down river-migrate-up river-migrate-down sqlc openapi-go openapi-ts arch-lint db-lint images-web images-backend k8s-build
 
 api-run:
 	cd services/api && go run ./cmd/api
@@ -44,3 +44,15 @@ arch-lint:
 
 db-lint:
 	squawk --pg-version=17.0 --assume-in-transaction --include=require-timeout-settings "services/api/db/migrations/*.sql"
+
+images-web:
+	docker buildx build --load --file apps/web/Dockerfile --tag flowlesshub-web:dev .
+
+images-backend:
+	docker buildx build --load --build-arg APP=api --file services/api/Dockerfile --tag flowlesshub-api:dev .
+	docker buildx build --load --build-arg APP=worker --file services/api/Dockerfile --tag flowlesshub-worker:dev .
+	docker buildx build --load --build-arg APP=migrate --file services/api/Dockerfile --tag flowlesshub-migrate:dev .
+
+k8s-build:
+	go run sigs.k8s.io/kustomize/kustomize/v5@v5.8.3 build deploy/k8s/base > /dev/null
+	go run sigs.k8s.io/kustomize/kustomize/v5@v5.8.3 build deploy/k8s/migrations > /dev/null
