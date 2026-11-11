@@ -34,7 +34,12 @@ func main() {
 	}
 	defer pool.Close()
 
-	workers := river.NewWorkers()
+	workers, err := newWorkers()
+	if err != nil {
+		logger.Error("register River workers", "error", err)
+		os.Exit(1)
+	}
+
 	client, err := river.NewClient(riverpgxv5.New(pool), &river.Config{
 		Queues: map[string]river.QueueConfig{
 			river.QueueDefault: {MaxWorkers: 10},
@@ -53,7 +58,11 @@ func main() {
 		logger.Error("start River worker", "error", err)
 		os.Exit(1)
 	}
-	logger.Info("River worker started; no business jobs are registered in S0")
+	logger.Info(
+		"River worker started",
+		"bootstrap_job_kind", bootstrapNoopJobKind,
+		"business_handlers_registered", false,
+	)
 	<-ctx.Done()
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
