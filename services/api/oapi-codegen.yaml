@@ -2,4 +2,5 @@ package: platformapi
 generate:
   models: true
   chi-server: true
+  strict-server: true
 output: internal/platform/httpapi/openapi.gen.go

@@ -61,6 +61,26 @@ jobs:
           cache-dependency-path: |
             services/api/go.mod
             services/api/go.sum
+      - name: Generate OpenAPI Go server stubs
+        run: make openapi-go
+      - name: Verify generated OpenAPI Go server is committed and current
+        shell: bash
+        run: |
+          generated="services/api/internal/platform/httpapi/openapi.gen.go"
+          if ! git ls-files --error-unmatch "$generated" >/dev/null 2>&1; then
+            echo "::error::Generated OpenAPI Go server is not tracked. Run make openapi-go and commit $generated."
+            exit 1
+          fi
+          if ! git diff --exit-code -- "$generated"; then
+            echo "::error::Generated OpenAPI Go server is out of date. Run make openapi-go and commit the result."
+            exit 1
+          fi
+          untracked="$(git ls-files --others --exclude-standard -- "$generated")"
+          if [[ -n "$untracked" ]]; then
+            echo "::error::Untracked OpenAPI Go output found:"
+            printf '%s\n' "$untracked"
+            exit 1
+          fi
       - name: Verify Go module boundaries
         working-directory: services/api
         run: go run github.com/fe3dback/go-arch-lint@v1.19.1 check --project-path .

@@ -34,7 +34,7 @@ sqlc:
 	cd services/api && go run github.com/sqlc-dev/sqlc/cmd/sqlc@v1.31.1 generate -f sqlc.yaml
 
 openapi-go:
-	cd services/api && go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.8.1 --config oapi-codegen.yaml ../../api/openapi.yaml
+	cd services/api && mkdir -p internal/platform/httpapi && go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.8.1 --config oapi-codegen.yaml ../../api/openapi.yaml
 
 openapi-ts:
 	pnpm api:generate
