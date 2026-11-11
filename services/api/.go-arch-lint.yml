@@ -22,12 +22,14 @@ components:
 
 deps:
   kernel:
-    anyProjectDeps: false
+    mayDependOn:
+      - kernel
   platform:
     mayDependOn:
       - kernel
   migrations:
-    anyProjectDeps: false
+    mayDependOn:
+      - migrations
   api:
     mayDependOn:
       - kernel
