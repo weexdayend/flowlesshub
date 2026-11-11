@@ -1,0 +1,43 @@
+version: 3
+workdir: .
+
+allow:
+  depOnAnyVendor: true
+  deepScan: true
+  ignoreNotFoundComponents: false
+
+components:
+  kernel:
+    in: internal/kernel/**
+  platform:
+    in: internal/platform/**
+  migrations:
+    in: db/migrations
+  api:
+    in: cmd/api
+  worker:
+    in: cmd/worker
+  migrate:
+    in: cmd/migrate
+
+deps:
+  kernel:
+    mayDependOn: []
+  platform:
+    mayDependOn:
+      - kernel
+  migrations:
+    mayDependOn: []
+  api:
+    mayDependOn:
+      - kernel
+      - platform
+  worker:
+    mayDependOn:
+      - kernel
+      - platform
+  migrate:
+    mayDependOn:
+      - kernel
+      - platform
+      - migrations

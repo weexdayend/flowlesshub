@@ -1,4 +1,4 @@
-.PHONY: api-run worker-run api-test api-vet api-fmt migrate-run db-up db-down river-migrate-up river-migrate-down sqlc openapi-go openapi-ts
+.PHONY: api-run worker-run api-test api-vet api-fmt migrate-run db-up db-down river-migrate-up river-migrate-down sqlc openapi-go openapi-ts arch-lint
 
 api-run:
 	cd services/api && go run ./cmd/api
@@ -38,3 +38,6 @@ openapi-go:
 
 openapi-ts:
 	pnpm api:generate
+
+arch-lint:
+	cd services/api && go run github.com/fe3dback/go-arch-lint@v1.16.0 check --project-path .

@@ -61,6 +61,9 @@ jobs:
           cache-dependency-path: |
             services/api/go.mod
             services/api/go.sum
+      - name: Verify Go module boundaries
+        working-directory: services/api
+        run: go run github.com/fe3dback/go-arch-lint@v1.16.0 check --project-path .
       - name: Verify formatting
         shell: bash
         run: |
