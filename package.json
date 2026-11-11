@@ -1,0 +1,22 @@
+{
+  "name": "flowlesshub",
+  "private": true,
+  "packageManager": "pnpm@12.18.0",
+  "engines": {
+    "node": ">=22.13.1"
+  },
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "test": "turbo test",
+    "api:generate": "pnpm --filter @flowlesshub/api-client generate",
+    "api:run": "go run ./services/api/cmd/api",
+    "worker:run": "go run ./services/api/cmd/worker"
+  },
+  "devDependencies": {
+    "turbo": "2.11.10",
+    "typescript": "5.9.3"
+  }
+}

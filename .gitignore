@@ -1,0 +1,32 @@
+# Dependencies
+**/node_modules/
+.pnpm-store/
+.pnp.*
+
+# Build output
+**/.next/
+**/out/
+**/dist/
+**/build/
+**/coverage/
+**/.turbo/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Go
+**/vendor/
+**/*.test
+
+# Tooling / OS
+.DS_Store
+Thumbs.db
+*.log
+*.tsbuildinfo
+.vercel/

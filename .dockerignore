@@ -1,0 +1,11 @@
+.git
+**/node_modules
+**/.next
+**/dist
+**/.turbo
+.pnpm-store
+**/coverage
+**/*.log
+.env
+.env.*
+!.env.example

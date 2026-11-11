@@ -1,0 +1,52 @@
+openapi: 3.1.0
+info:
+  title: FlowlessHub API
+  version: 0.1.0
+  summary: OpenAPI-first contract for the FlowlessHub modular monolith.
+  description: >-
+    Foundation contract. Business endpoints are added only with their approved
+    vertical slices. Cost and margin data must never be exposed to client or vendor APIs.
+servers:
+  - url: http://localhost:5050
+    description: Local development
+paths:
+  /livez:
+    get:
+      operationId: getLiveness
+      summary: Process liveness probe
+      tags: [Platform]
+      responses:
+        "200":
+          description: Process is alive.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+  /readyz:
+    get:
+      operationId: getReadiness
+      summary: Dependency readiness probe
+      tags: [Platform]
+      responses:
+        "200":
+          description: Required dependencies are reachable.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+        "503":
+          description: A required dependency is unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ok, unavailable]

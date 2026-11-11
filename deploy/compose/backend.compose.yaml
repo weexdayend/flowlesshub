@@ -1,0 +1,51 @@
+name: flowlesshub-backend
+services:
+  postgres:
+    image: postgres:17.11-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-flowlesshub}
+      POSTGRES_USER: ${POSTGRES_USER:-flowlesshub}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-only-change-me}
+    ports:
+      - "5432:5432"
+    volumes:
+      - flowlesshub-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+  api:
+    build:
+      context: ../..
+      dockerfile: services/api/Dockerfile
+      args:
+        APP: api
+    restart: unless-stopped
+    environment:
+      HTTP_ADDR: :5050
+      DATABASE_URL: postgres://${POSTGRES_USER:-flowlesshub}:${POSTGRES_PASSWORD:-local-only-change-me}@postgres:5432/${POSTGRES_DB:-flowlesshub}?sslmode=disable
+    ports:
+      - "5050:5050"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: ../..
+      dockerfile: services/api/Dockerfile
+      args:
+        APP: worker
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-flowlesshub}:${POSTGRES_PASSWORD:-local-only-change-me}@postgres:5432/${POSTGRES_DB:-flowlesshub}?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  flowlesshub-postgres-data:

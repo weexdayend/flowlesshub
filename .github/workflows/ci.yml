@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: Frontend quality gates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22.16.0
+      - name: Enable pinned pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@12.18.0 --activate
+      - name: Install workspace
+        run: pnpm install --no-frozen-lockfile
+      - name: Generate API types
+        run: pnpm api:generate
+      - name: Lint
+        run: pnpm lint
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Build
+        run: pnpm build
+
+  backend:
+    name: Backend quality gates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.27.4"
+          cache-dependency-path: services/api/go.mod
+      - name: Verify formatting
+        shell: bash
+        run: |
+          mapfile -t go_files < <(find services/api/cmd services/api/internal -type f -name '*.go')
+          if ((${#go_files[@]})); then
+            unformatted="$(gofmt -l "${go_files[@]}")"
+            if [[ -n "$unformatted" ]]; then
+              printf '%s\n' "$unformatted"
+              exit 1
+            fi
+          fi
+      - name: Resolve modules
+        working-directory: services/api
+        run: go mod download
+      - name: Vet
+        working-directory: services/api
+        run: go vet ./...
+      - name: Test
+        working-directory: services/api
+        run: go test ./...
