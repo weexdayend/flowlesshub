@@ -9,7 +9,19 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$ExpectedHead = 'c2cc54065cf49410538f4abed850567741dee813'
+$BaselineHead = 'c2cc54065cf49410538f4abed850567741dee813'
+$RuntimeSensitivePaths = @(
+    '.env.example',
+    'deploy/compose/backend.compose.yaml',
+    'services/api/Dockerfile',
+    'services/api/cmd',
+    'services/api/db/migrations',
+    'services/api/go.mod',
+    'services/api/go.sum',
+    'services/api/internal/kernel/config',
+    'services/api/internal/kernel/health',
+    'services/api/internal/platform/database'
+)
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $ComposeFile = Join-Path $RepoRoot 'deploy/compose/backend.compose.yaml'
 $EnvFile = Join-Path $RepoRoot '.env.example'
@@ -225,19 +237,36 @@ function Assert-PortAvailable {
 }
 
 try {
-    Write-Step 'Preflight exact baseline and local prerequisites'
+    Write-Step 'Preflight audited baseline and runtime input integrity'
     Set-Location $RepoRoot
 
     $actualHead = (& git rev-parse HEAD).Trim()
     if ($LASTEXITCODE -ne 0) { throw 'Unable to read Git HEAD.' }
-    if ($actualHead -ne $ExpectedHead) {
-        throw "Unexpected HEAD '$actualHead'; this harness is pinned to '$ExpectedHead'. Re-audit before reuse on another baseline."
+
+    & git cat-file -e "$BaselineHead^{commit}" 2>$null
+    if ($LASTEXITCODE -ne 0) {
+        throw "Audited baseline '$BaselineHead' is unavailable locally. Fetch the repository history before running this harness."
     }
 
-    & git diff --quiet
-    if ($LASTEXITCODE -ne 0) { throw 'Tracked working tree has modifications; keep unrelated changes out of the runtime acceptance run.' }
-    & git diff --cached --quiet
-    if ($LASTEXITCODE -ne 0) { throw 'Git index has staged changes; unstage unrelated changes before runtime acceptance.' }
+    & git merge-base --is-ancestor $BaselineHead $actualHead
+    if ($LASTEXITCODE -ne 0) {
+        throw "HEAD '$actualHead' is not a descendant of the audited baseline '$BaselineHead'. Re-audit before running this harness."
+    }
+
+    & git diff --quiet $BaselineHead $actualHead -- $RuntimeSensitivePaths
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Runtime-sensitive repository files changed since the audited baseline. Re-audit the harness before running it.'
+    }
+
+    & git diff --quiet HEAD -- $RuntimeSensitivePaths
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Runtime-sensitive files have local modifications. Commit or revert those paths before runtime acceptance.'
+    }
+
+    $untrackedRuntimePaths = @(& git ls-files --others --exclude-standard -- $RuntimeSensitivePaths)
+    if ($untrackedRuntimePaths.Count -gt 0) {
+        throw "Untracked runtime-sensitive files found: $($untrackedRuntimePaths -join ', ')"
+    }
 
     foreach ($path in @($ComposeFile, $EnvFile)) {
         if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
