@@ -1,4 +1,4 @@
-.PHONY: api-run worker-run api-test api-vet api-fmt db-up db-down river-migrate-up river-migrate-down sqlc openapi-go openapi-ts
+.PHONY: api-run worker-run api-test api-vet api-fmt migrate-run db-up db-down river-migrate-up river-migrate-down sqlc openapi-go openapi-ts
 
 api-run:
 	cd services/api && go run ./cmd/api
@@ -14,6 +14,9 @@ api-vet:
 
 api-fmt:
 	find services/api/cmd services/api/internal -type f -name '*.go' -print0 | xargs -0 gofmt -w
+
+migrate-run:
+	cd services/api && go run ./cmd/migrate
 
 db-up:
 	go run github.com/pressly/goose/v3/cmd/goose@v3.30.0 -dir services/api/db/migrations postgres "$(DATABASE_URL)" up
