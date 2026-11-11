@@ -1,3 +1,6 @@
+minimumReleaseAgeExclude:
+  - caniuse-lite@1.0.30001826
+  - electron-to-chromium@1.5.481
 packages:
   - "apps/*"
   - "packages/*"
