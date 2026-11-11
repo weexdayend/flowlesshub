@@ -1,6 +1,6 @@
 FROM golang:1.27.4-bookworm AS builder
 WORKDIR /src
-COPY services/api/go.mod ./go.mod
+COPY services/api/go.mod services/api/go.sum ./
 RUN go mod download
 COPY services/api/ ./
 ARG APP=api

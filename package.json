@@ -10,10 +10,12 @@
     "build": "turbo build",
     "lint": "turbo lint",
     "typecheck": "turbo typecheck",
-    "test": "turbo test",
+    "test": "pnpm api:test",
     "api:generate": "pnpm --filter @flowlesshub/api-client generate",
-    "api:run": "go run ./services/api/cmd/api",
-    "worker:run": "go run ./services/api/cmd/worker"
+    "api:run": "go -C services/api run ./cmd/api",
+    "worker:run": "go -C services/api run ./cmd/worker",
+    "api:test": "go -C services/api test ./...",
+    "api:vet": "go -C services/api vet ./..."
   },
   "devDependencies": {
     "turbo": "2.11.10",
