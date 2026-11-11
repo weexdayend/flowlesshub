@@ -63,7 +63,7 @@ jobs:
             services/api/go.sum
       - name: Verify Go module boundaries
         working-directory: services/api
-        run: go run github.com/fe3dback/go-arch-lint@v1.16.0 check --project-path .
+        run: go run github.com/fe3dback/go-arch-lint@v1.19.1 check --project-path .
       - name: Verify formatting
         shell: bash
         run: |

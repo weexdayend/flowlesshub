@@ -40,4 +40,4 @@ openapi-ts:
 	pnpm api:generate
 
 arch-lint:
-	cd services/api && go run github.com/fe3dback/go-arch-lint@v1.16.0 check --project-path .
+	cd services/api && go run github.com/fe3dback/go-arch-lint@v1.19.1 check --project-path .
