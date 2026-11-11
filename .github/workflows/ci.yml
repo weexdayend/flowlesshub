@@ -64,6 +64,42 @@ jobs:
       - name: Verify Go module boundaries
         working-directory: services/api
         run: go run github.com/fe3dback/go-arch-lint@v1.19.1 check --project-path .
+      - name: Lint PostgreSQL migrations with Squawk
+        shell: bash
+        run: |
+          version="2.72.0"
+          expected_sha256="a61661808119a82515565503111099b070c869f73698f61cb1785de5d0c8b11a"
+          binary="$RUNNER_TEMP/squawk"
+          curl -fsSL "https://github.com/sbdchd/squawk/releases/download/v${version}/squawk-linux-x64" -o "$binary"
+          printf '%s  %s\n' "$expected_sha256" "$binary" | sha256sum --check
+          chmod +x "$binary"
+          "$binary" --pg-version=17.0 --assume-in-transaction --include=require-timeout-settings "services/api/db/migrations/*.sql"
+      - name: Generate sqlc Go code
+        working-directory: services/api
+        run: go run github.com/sqlc-dev/sqlc/cmd/sqlc@v1.31.1 generate -f sqlc.yaml
+      - name: Verify generated sqlc code is committed and current
+        shell: bash
+        run: |
+          generated_dir="services/api/internal/platform/dbgen"
+          expected_files=(db.go models.go querier.go platform.sql.go)
+          for filename in "${expected_files[@]}"; do
+            generated="$generated_dir/$filename"
+            if ! git ls-files --error-unmatch "$generated" >/dev/null 2>&1; then
+              echo "::error::Generated sqlc file is not tracked: $generated"
+              echo "Run make sqlc and commit the generated output."
+              exit 1
+            fi
+          done
+          if ! git diff --exit-code -- "$generated_dir"; then
+            echo "::error::Generated sqlc code is out of date. Run make sqlc and commit the result."
+            exit 1
+          fi
+          untracked="$(git ls-files --others --exclude-standard -- "$generated_dir")"
+          if [[ -n "$untracked" ]]; then
+            echo "::error::Untracked sqlc output found:"
+            printf '%s\n' "$untracked"
+            exit 1
+          fi
       - name: Verify formatting
         shell: bash
         run: |
