@@ -30,3 +30,6 @@ Thumbs.db
 *.log
 *.tsbuildinfo
 .vercel/
+
+# VPS-only runtime state, Caddy active config, backups, and release env
+.vps-runtime/

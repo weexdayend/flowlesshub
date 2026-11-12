@@ -1,0 +1,22 @@
+{
+    admin 127.0.0.1:2019
+    auto_https off
+}
+
+:5052 {
+    reverse_proxy api-green:5050 {
+        health_uri /readyz
+        health_interval 2s
+        health_timeout 2s
+        health_fails 2
+    }
+}
+
+:3032 {
+    reverse_proxy web-green:3000 {
+        health_uri /
+        health_interval 2s
+        health_timeout 3s
+        health_fails 2
+    }
+}

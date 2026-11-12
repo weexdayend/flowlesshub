@@ -9,3 +9,6 @@
 .env
 .env.*
 !.env.example
+
+# VPS runtime env, backups, and Caddy state must never enter a build context
+.vps-runtime/

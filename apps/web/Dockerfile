@@ -12,6 +12,8 @@ RUN pnpm install --frozen-lockfile
 
 FROM deps AS builder
 COPY . .
+ARG NEXT_PUBLIC_API_BASE_URL=https://api.flowlesshub.com
+ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
 RUN pnpm --filter @flowlesshub/web build
 
 FROM node:22.16.0-alpine AS runner
@@ -22,6 +24,7 @@ RUN addgroup --system --gid 1001 nodejs \
     && adduser --system --uid 1001 nextjs
 COPY --from=builder --chown=nextjs:nodejs /repo/apps/web/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /repo/apps/web/.next/static ./apps/web/.next/static
+RUN mkdir -p ./apps/web/.next/cache && chown -R nextjs:nodejs ./apps/web/.next
 USER nextjs
 EXPOSE 3000
 CMD ["node", "apps/web/server.js"]

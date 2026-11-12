@@ -1,0 +1,204 @@
+name: flowlesshub-vps
+
+services:
+  postgres:
+    image: postgres:17.11-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${FLOWLESSHUB_DB_NAME:-flowlesshub}
+      POSTGRES_USER: ${FLOWLESSHUB_DB_USER:-flowlesshub}
+      POSTGRES_PASSWORD: ${FLOWLESSHUB_DB_PASSWORD:?Set FLOWLESSHUB_DB_PASSWORD in .vps-runtime/.env}
+    command:
+      - postgres
+      - -c
+      - shared_buffers=64MB
+      - -c
+      - max_connections=80
+      - -c
+      - work_mem=2MB
+      - -c
+      - maintenance_work_mem=32MB
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - backend
+    mem_limit: 384m
+    shm_size: 64m
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    logging: &default-logging
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+  pgbouncer:
+    image: edoburu/pgbouncer:v1.26.1-p0
+    restart: unless-stopped
+    environment:
+      DB_USER: ${FLOWLESSHUB_DB_USER:-flowlesshub}
+      DB_PASSWORD: ${FLOWLESSHUB_DB_PASSWORD:?Set FLOWLESSHUB_DB_PASSWORD in .vps-runtime/.env}
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_NAME: ${FLOWLESSHUB_DB_NAME:-flowlesshub}
+      AUTH_TYPE: scram-sha-256
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: 80
+      DEFAULT_POOL_SIZE: 10
+      MAX_PREPARED_STATEMENTS: 200
+      LISTEN_ADDR: 0.0.0.0
+      LISTEN_PORT: "6432"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - backend
+    mem_limit: 64m
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - 'PGPASSWORD="$$DB_PASSWORD" psql -h 127.0.0.1 -p 6432 -U "$$DB_USER" -d "$$DB_NAME" -v ON_ERROR_STOP=1 -c "SELECT 1" >/dev/null'
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 5s
+    logging: *default-logging
+
+  api-blue:
+    image: ghcr.io/${FLOWLESSHUB_GHCR_OWNER:-weexdayend}/flowlesshub-api:${FLOWLESSHUB_BLUE_RELEASE:?Set FLOWLESSHUB_BLUE_RELEASE}
+    profiles: ["blue"]
+    restart: unless-stopped
+    environment:
+      HTTP_ADDR: ":5050"
+      DATABASE_URL: postgres://${FLOWLESSHUB_DB_USER:-flowlesshub}:${FLOWLESSHUB_DB_PASSWORD:?Set FLOWLESSHUB_DB_PASSWORD}@pgbouncer:6432/${FLOWLESSHUB_DB_NAME:-flowlesshub}?sslmode=disable
+    expose: ["5050"]
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+    networks: [edge, backend]
+    stop_grace_period: 25s
+    mem_limit: 96m
+    logging: *default-logging
+
+  web-blue:
+    image: ghcr.io/${FLOWLESSHUB_GHCR_OWNER:-weexdayend}/flowlesshub-web:${FLOWLESSHUB_BLUE_RELEASE:?Set FLOWLESSHUB_BLUE_RELEASE}
+    profiles: ["blue"]
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: 0.0.0.0
+      NEXT_TELEMETRY_DISABLED: "1"
+    expose: ["3000"]
+    networks: [edge]
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=32m,mode=1777
+    volumes:
+      - web-cache-blue:/app/apps/web/.next/cache
+    stop_grace_period: 20s
+    mem_limit: 256m
+    logging: *default-logging
+
+  api-green:
+    image: ghcr.io/${FLOWLESSHUB_GHCR_OWNER:-weexdayend}/flowlesshub-api:${FLOWLESSHUB_GREEN_RELEASE:?Set FLOWLESSHUB_GREEN_RELEASE}
+    profiles: ["green"]
+    restart: unless-stopped
+    environment:
+      HTTP_ADDR: ":5050"
+      DATABASE_URL: postgres://${FLOWLESSHUB_DB_USER:-flowlesshub}:${FLOWLESSHUB_DB_PASSWORD:?Set FLOWLESSHUB_DB_PASSWORD}@pgbouncer:6432/${FLOWLESSHUB_DB_NAME:-flowlesshub}?sslmode=disable
+    expose: ["5050"]
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+    networks: [edge, backend]
+    stop_grace_period: 25s
+    mem_limit: 96m
+    logging: *default-logging
+
+  web-green:
+    image: ghcr.io/${FLOWLESSHUB_GHCR_OWNER:-weexdayend}/flowlesshub-web:${FLOWLESSHUB_GREEN_RELEASE:?Set FLOWLESSHUB_GREEN_RELEASE}
+    profiles: ["green"]
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: 0.0.0.0
+      NEXT_TELEMETRY_DISABLED: "1"
+    expose: ["3000"]
+    networks: [edge]
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=32m,mode=1777
+    volumes:
+      - web-cache-green:/app/apps/web/.next/cache
+    stop_grace_period: 20s
+    mem_limit: 256m
+    logging: *default-logging
+
+  worker:
+    image: ghcr.io/${FLOWLESSHUB_GHCR_OWNER:-weexdayend}/flowlesshub-worker:${FLOWLESSHUB_WORKER_RELEASE:?Set FLOWLESSHUB_WORKER_RELEASE}
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://${FLOWLESSHUB_DB_USER:-flowlesshub}:${FLOWLESSHUB_DB_PASSWORD:?Set FLOWLESSHUB_DB_PASSWORD}@postgres:5432/${FLOWLESSHUB_DB_NAME:-flowlesshub}?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [backend]
+    stop_grace_period: 30s
+    mem_limit: 96m
+    logging: *default-logging
+
+  migrate:
+    image: ghcr.io/${FLOWLESSHUB_GHCR_OWNER:-weexdayend}/flowlesshub-migrate:${FLOWLESSHUB_MIGRATE_RELEASE:?Set FLOWLESSHUB_MIGRATE_RELEASE}
+    profiles: ["tools"]
+    environment:
+      DATABASE_URL: postgres://${FLOWLESSHUB_DB_USER:-flowlesshub}:${FLOWLESSHUB_DB_PASSWORD:?Set FLOWLESSHUB_DB_PASSWORD}@postgres:5432/${FLOWLESSHUB_DB_NAME:-flowlesshub}?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [backend]
+    mem_limit: 128m
+    logging: *default-logging
+
+  edge:
+    image: caddy:2.11.9-alpine
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3032:3032"
+      - "127.0.0.1:5052:5052"
+    volumes:
+      - ../../.vps-runtime/caddy:/etc/caddy:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks: [edge]
+    mem_limit: 64m
+    logging: *default-logging
+
+networks:
+  edge:
+    name: flowlesshub-vps-edge
+    driver: bridge
+  backend:
+    name: flowlesshub-vps-backend
+    driver: bridge
+    internal: true
+
+volumes:
+  postgres-data:
+    name: flowlesshub-vps-postgres-data
+  web-cache-blue:
+    name: flowlesshub-vps-web-cache-blue
+  web-cache-green:
+    name: flowlesshub-vps-web-cache-green
+  caddy-data:
+    name: flowlesshub-vps-caddy-data
+  caddy-config:
+    name: flowlesshub-vps-caddy-config
