@@ -74,8 +74,8 @@ if [[ -e "$RETENTION_POLICY" ]]; then
     exit 1
   }
   # This is an operator-managed shell environment file; do not accept group/other-writable input.
-  # shellcheck disable=SC1090
   set -a
+  # shellcheck source=/dev/null
   . "$RETENTION_POLICY"
   set +a
   AUTO_PRUNE="${FLOWLESSHUB_BACKUP_RETENTION_AUTO_PRUNE:-0}"

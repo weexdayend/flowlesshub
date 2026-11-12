@@ -47,8 +47,8 @@ fi
 }
 
 # This file is an operator-managed shell environment file. It must be owner-controlled.
-# shellcheck disable=SC1090
 set -a
+# shellcheck source=/dev/null
 . "$POLICY_FILE"
 set +a
 
@@ -80,8 +80,8 @@ fi
 if [[ -f "$OFFSITE_CONFIG" && ! -L "$OFFSITE_CONFIG" && \
       "$(stat -c '%a' "$OFFSITE_CONFIG")" == "600" && \
       "$(stat -c '%u' "$OFFSITE_CONFIG")" == "$(id -u)" ]]; then
-  # shellcheck disable=SC1090
   set -a
+  # shellcheck source=/dev/null
   . "$OFFSITE_CONFIG"
   set +a
   if [[ "${FLOWLESSHUB_OFFSITE_ENABLED:-0}" == "1" && \

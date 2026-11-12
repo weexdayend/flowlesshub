@@ -38,8 +38,8 @@ fi
 }
 
 # This file is an operator-managed shell environment file. It must be owner-controlled.
-# shellcheck disable=SC1090
 set -a
+# shellcheck source=/dev/null
 . "$CONFIG_FILE"
 set +a
 
