@@ -54,8 +54,7 @@ images-backend:
 	docker buildx build --load --build-arg APP=migrate --file services/api/Dockerfile --tag flowlesshub-migrate:dev .
 
 edge-validate:
-	bash scripts/k8s/validate-edge-config.sh
-	bash scripts/k8s/validate-edge-manifests.sh
+	node scripts/k8s/validate-edge.mjs
 
 k8s-build:
 	go run sigs.k8s.io/kustomize/kustomize/v5@v5.8.3 build deploy/k8s/base > /dev/null
