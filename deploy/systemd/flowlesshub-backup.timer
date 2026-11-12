@@ -1,8 +1,8 @@
 [Unit]
-Description=Proposed daily FlowlessHub backup schedule (disabled until owner approval)
+Description=Daily FlowlessHub backup schedule (disabled until separate activation approval)
 
 [Timer]
-OnCalendar=*-*-* 03:00:00 UTC
+OnCalendar=*-*-* 20:00:00 UTC
 Persistent=true
 RandomizedDelaySec=15m
 Unit=flowlesshub-backup.service

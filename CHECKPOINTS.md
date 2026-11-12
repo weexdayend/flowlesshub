@@ -43,7 +43,7 @@
 | S0.8 | Caddy edge and Blue/Green deployment foundation / edge validation repair | `IMPLEMENTED; ACCEPTANCE RECORD NEEDS RECONCILIATION` | Edge repair commit `e8f33bb7c0e92d4c49724dadde55d2378cbfddce`; repair history also documents earlier base `f949f896514cb871d1cbaeb2c01aac3195d6e546` | Run #26 on `e8f33...` passed per the S0.9 VPS runbook; the S0.8 repair acceptance file says it does not claim acceptance | Do not infer production acceptance from CI | [Slice](docs/slices/S0.8-caddy-edge-blue-green.md), [Acceptance](docs/acceptance/S0.8-edge-validation-repair.md), [Runbook](docs/runbooks/S0.8-caddy-edge-blue-green.md). Reconcile the acceptance record from evidence; preserve historical facts. |
 | S0.9 | VPS-first Compose Blue/Green delivery hardening | `IMPLEMENTED; RUNTIME ACCEPTANCE PENDING IN CURRENT RECORD` | Foundation `e8f33...`; hardening commit `20558818bca599782c822e9e3851e64cb979c369`; executable-mode fix `2bfdc36106df4a65dad410e8c71e91cd580de21d` | Baseline CI run #26 passed; later exact-SHA evidence must be read from GitHub | Current S0.9 acceptance document still marks VPS runtime acceptance pending; do not silently change it | [New slice](docs/slices/S0.9-vps-first-hardening.md), [Acceptance](docs/acceptance/S0.9-vps-first-hardening.md), [Runbook](docs/runbooks/S0.9-vps-blue-green-deployment.md). Owner/runtime evidence reconciliation remains a follow-up. |
 | S0.10 | Backup integrity and isolated restore drill | `CLOSED` | Implementation accepted at `94536d65317aa513bdc715a39fbce2789dbb8709`; scripts first hardened at `2bfdc36106df4a65dad410e8c71e91cd580de21d` | Run #29 / `43189431464` passed on exact accepted SHA | Owner accepted actual backup, off-host workstation checksum, isolated restore, production post-checks, and Petshop isolation on 12 Nov 2026 | [Slice](docs/slices/S0.10-backup-restore-drill.md), [Acceptance](docs/acceptance/S0.10-backup-restore-drill.md), [Runbook](docs/runbooks/S0.10-backup-restore-drill.md). Do not repeat the S0.10 drill merely to reconfirm it. |
-| S0.11 | Scheduled backup operations, retention, and off-site recovery | `PREPARED / OWNER DECISIONS AND VALIDATION PENDING` | Prepared against `94536d65317aa513bdc715a39fbce2789dbb8709`; candidate implementation files in this checkpoint package | Not run yet; exact-SHA CI must validate new VPS scripts | Not installed, enabled, or executed on VPS | [Slice](docs/slices/S0.11-scheduled-backup-operations.md), [Acceptance](docs/acceptance/S0.11-scheduled-backup-operations.md), [Runbook](docs/runbooks/S0.11-scheduled-backup-operations.md). Timer, provider, credentials, retention policy, and remote repo remain disabled/unconfigured. |
+| S0.11 | Scheduled backup operations, retention, and off-site recovery | `IMPLEMENTED / BASE CI VERIFIED; POLICY ALIGNMENT PENDING` | Initial package against `94536d65317aa513bdc715a39fbce2789dbb8709`; latest CI-verified SHA `b19acdebe584fa0a432dae4c89c29229df8f7b1e` | Run #31 / `43250984796` passed: backend, VPS deployment config, frontend | No VPS runtime acceptance yet; timer not installed/enabled, R2 repository not initialized, external alert not configured | [Slice](docs/slices/S0.11-scheduled-backup-operations.md), [Acceptance](docs/acceptance/S0.11-scheduled-backup-operations.md), [Runbook](docs/runbooks/S0.11-scheduled-backup-operations.md). Owner policy: daily 20:00 UTC, R2 bucket `flowlesshub`, local keep 2; deletion remains disabled; external alert destination pending. |
 
 ### Status reconciliation notes
 
@@ -69,14 +69,14 @@
 
 ## 5. Active checkpoint gate — S0.11
 
-S0.11 may be accepted only when its slice and implementation scope are owner-approved, the exact-SHA CI gates pass, the timer is deliberately installed/enabled after policy decisions, and runtime evidence proves actual backup execution, off-site upload where configured, retention behavior, and isolation.
+S0.11 runtime acceptance may be performed with the timer disabled: owner-approved policy, exact-SHA CI, a manual one-shot service run, R2 upload/read-back, retention dry-run, external alert delivery, resource guards, and FlowlessHub/Petshop isolation must all be evidenced. Timer activation is a separate post-acceptance approval.
 
 The current package defaults are fail-closed:
 
-- systemd timer file is not installed or enabled;
-- off-site upload is disabled and no remote repository is initialized;
-- retention is disabled, dry-run by default, and deletion requires explicit policy plus `--apply`;
-- no provider, bucket, credentials, encryption password, alert channel, retention count, RPO, or RTO is presumed;
+- systemd timer file is not installed or enabled; approved schedule is daily `20:00 UTC` with up to 15 minutes random delay;
+- Cloudflare R2 is the approved provider; bucket is `flowlesshub`, region `auto`; off-site remains disabled until old credentials are revoked, new bucket-scoped credentials and Restic password recovery are provisioned, and the repository is explicitly initialized;
+- retention dry-run is configured for keep-last 2; local deletion remains disabled (`ALLOW_DELETE=0`) and auto-prune remains disabled (`AUTO_PRUNE=0`);
+- external alerting is required and approved, but destination/channel, configuration, and delivery test remain pending; RPO/RTO are not agreed;
 - no restore is scheduled automatically;
 - no production or Petshop service is restarted or modified by the proposed backup workflow.
 
@@ -84,22 +84,22 @@ The current package defaults are fail-closed:
 
 | Decision | Current state | Required before |
 |---|---|---|
-| Backup cadence and time | Proposal: daily at 03:00 UTC with up to 15 minutes randomized delay | Timer installation/enabling |
-| Off-site provider / S3 endpoint / bucket / region | Not selected | `restic init` and upload enablement |
-| Off-site credentials and Restic encryption password | Not provisioned | Upload enablement |
-| Local retention count | Not selected; must keep at least two newest backups | Retention enablement |
-| Local deletion permission | Disabled | Any `--apply` deletion |
+| Backup cadence and time | Approved: daily 20:00 UTC (`03:00–03:15 WIB` next day) | Runtime verification; timer activation separately gated |
+| Off-site provider / S3 endpoint / bucket / region | Approved: Cloudflare R2; account endpoint recorded in runbook; bucket `flowlesshub`; region `auto` | Verify jurisdiction, provision credentials and initialize repository once |
+| Off-site credentials and Restic encryption password | Previously disclosed values must be revoked; fresh credentials/password not provisioned | Upload enablement |
+| Local retention count | Approved: keep two newest; dry-run only | Runtime dry-run validation |
+| Local deletion permission | Not approved; disabled | Any future `--apply` requires separate approval |
 | Remote Restic retention/prune policy | Not designed | Remote snapshot pruning |
-| Alert destination | Not selected; journald only in current package | External alert integration |
+| Alert destination | External alerting approved; specific channel/endpoint and delivery test pending | Timer activation |
 | Recurring restore-drill cadence | Not selected; never auto-run by this timer | Restore schedule |
 | RPO / RTO | Not agreed | Any formal recovery objective claim |
 
 ## 6. Follow-up queue
 
 1. Reconcile S0.8 and S0.9 acceptance documents against exact source/CI/runtime evidence without rewriting historical baselines.
-2. Complete the S0.11 owner policy decisions and validation before timer activation.
+2. Complete S0.11 R2 credential rotation, password escrow, repository initialization, and manual runtime acceptance while the timer remains disabled.
 3. Design and validate remote Restic retention/prune policy separately; the S0.11 local retention script does not prune remote snapshots.
-4. Add a chosen alert destination only after one is approved; until then monitor systemd result and journald.
+4. Select and validate the approved external alert destination; do not activate the timer until a test notification is received.
 5. Define and rehearse recurring isolated restore cadence and service-level RPO/RTO after owner approval.
 6. Keep broader S0 exit requirements open until the full S0 definition of done is evidenced.
 
