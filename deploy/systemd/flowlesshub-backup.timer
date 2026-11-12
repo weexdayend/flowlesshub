@@ -1,0 +1,11 @@
+[Unit]
+Description=Proposed daily FlowlessHub backup schedule (disabled until owner approval)
+
+[Timer]
+OnCalendar=*-*-* 03:00:00 UTC
+Persistent=true
+RandomizedDelaySec=15m
+Unit=flowlesshub-backup.service
+
+[Install]
+WantedBy=timers.target
