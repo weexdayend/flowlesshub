@@ -25,22 +25,28 @@ func TestLiveness(t *testing.T) {
 	}
 }
 
-func TestReadiness(t *testing.T) {
+func TestReadinessGate(t *testing.T) {
 	tests := []struct {
 		name       string
 		err        error
+		draining   bool
 		wantStatus int
 		wantBody   string
 	}{
 		{name: "ready", wantStatus: http.StatusOK, wantBody: `{"status":"ok"}`},
 		{name: "dependency unavailable", err: errors.New("database unavailable"), wantStatus: http.StatusServiceUnavailable, wantBody: `{"status":"unavailable"}`},
+		{name: "draining", draining: true, wantStatus: http.StatusServiceUnavailable, wantBody: `{"status":"draining"}`},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			gate := NewReadinessGate(fakePinger{err: test.err})
+			if test.draining {
+				gate.MarkDraining()
+			}
+
 			recorder := httptest.NewRecorder()
-			handler := Readiness(fakePinger{err: test.err})
-			handler.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/readyz", nil))
+			gate.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/readyz", nil))
 
 			if recorder.Code != test.wantStatus {
 				t.Fatalf("status = %d, want %d", recorder.Code, test.wantStatus)
@@ -49,5 +55,20 @@ func TestReadiness(t *testing.T) {
 				t.Fatalf("body = %q, want %q", got, test.wantBody)
 			}
 		})
+	}
+}
+
+func TestReadinessGateMarkDrainingIsIdempotent(t *testing.T) {
+	gate := NewReadinessGate(fakePinger{})
+	gate.MarkDraining()
+	gate.MarkDraining()
+
+	recorder := httptest.NewRecorder()
+	gate.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/readyz", nil))
+	if recorder.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d, want %d", recorder.Code, http.StatusServiceUnavailable)
+	}
+	if got := strings.TrimSpace(recorder.Body.String()); got != `{"status":"draining"}` {
+		t.Fatalf("body = %q, want draining JSON", got)
 	}
 }

@@ -1,0 +1,9 @@
+{
+  admin localhost:2019
+  shutdown_delay 5s
+  grace_period 25s
+}
+
+:80 {
+  import /etc/caddy/routes.caddy
+}

@@ -6,6 +6,21 @@ resources:
   - runtime-config.yaml
   - api-deployment.yaml
   - api-service.yaml
+  - api-blue-service.yaml
+  - api-green-deployment.yaml
+  - api-green-service.yaml
   - web-deployment.yaml
   - web-service.yaml
+  - web-blue-service.yaml
+  - web-green-deployment.yaml
+  - web-green-service.yaml
   - worker-deployment.yaml
+  - edge-runtime-config.yaml
+  - edge-deployment.yaml
+  - edge-service.yaml
+configMapGenerator:
+  - name: flowlesshub-edge-config
+    files:
+      - Caddyfile.local=caddy/Caddyfile.local
+      - Caddyfile.production=caddy/Caddyfile.production
+      - routes.caddy=caddy/routes.caddy

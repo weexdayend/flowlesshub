@@ -1,0 +1,10 @@
+{
+  admin localhost:2019
+  shutdown_delay 5s
+  grace_period 25s
+}
+
+{$FLOWLESSHUB_SITE_ADDRESS} {
+  tls /etc/caddy/tls/tls.crt /etc/caddy/tls/tls.key
+  import /etc/caddy/routes.caddy
+}

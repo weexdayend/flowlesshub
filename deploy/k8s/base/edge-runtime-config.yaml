@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: flowlesshub-edge-runtime
+  labels:
+    app.kubernetes.io/part-of: flowlesshub
+data:
+  # Replace this placeholder before applying the production overlay.
+  FLOWLESSHUB_SITE_ADDRESS: "replace-with-real-hostname.example"

@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flowlesshub-edge
+spec:
+  template:
+    spec:
+      containers:
+        - name: caddy
+          args:
+            - run
+            - --config
+            - /etc/caddy/Caddyfile.production
+            - --adapter
+            - caddyfile
+          volumeMounts:
+            - name: edge-tls
+              mountPath: /etc/caddy/tls
+              readOnly: true
+      volumes:
+        - name: edge-tls
+          secret:
+            secretName: flowlesshub-edge-tls

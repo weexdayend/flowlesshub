@@ -145,7 +145,12 @@ jobs:
       - name: Test
         working-directory: services/api
         run: go test ./...
+      - name: Race detector
+        working-directory: services/api
+        run: go test -race ./...
       - name: Build backend container images
         run: make images-backend
       - name: Validate Kubernetes manifests
         run: make k8s-build
+      - name: Validate Caddy edge configuration
+        run: make edge-validate

@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: flowlesshub-api-green
+  labels:
+    app.kubernetes.io/name: flowlesshub-api-green
+    app.kubernetes.io/component: api
+    app.kubernetes.io/part-of: flowlesshub
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: flowlesshub-api-green
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP

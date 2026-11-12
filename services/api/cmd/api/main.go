@@ -18,6 +18,11 @@ import (
 	"github.com/weexdayend/flowlesshub/services/api/internal/platform/database"
 )
 
+const (
+	readinessDrainDelay = 5 * time.Second
+	serverShutdownLimit = 25 * time.Second
+)
+
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	slog.SetDefault(logger)
@@ -37,12 +42,14 @@ func main() {
 	}
 	defer pool.Close()
 
+	readiness := health.NewReadinessGate(pool)
+
 	router := chi.NewRouter()
 	router.Use(middleware.RequestID)
 	router.Use(middleware.RealIP)
 	router.Use(middleware.Recoverer)
 	router.Get("/livez", health.Liveness)
-	router.Get("/readyz", health.Readiness(pool))
+	router.Get("/readyz", readiness.ServeHTTP)
 
 	server := &http.Server{
 		Addr:              cfg.HTTPAddr,
@@ -67,7 +74,13 @@ func main() {
 			os.Exit(1)
 		}
 	case <-ctx.Done():
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		readiness.MarkDraining()
+		logger.Info("API entering drain mode", "readiness", "draining", "drain_delay", readinessDrainDelay)
+
+		drainTimer := time.NewTimer(readinessDrainDelay)
+		<-drainTimer.C
+
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), serverShutdownLimit)
 		defer cancel()
 		if err := server.Shutdown(shutdownCtx); err != nil {
 			logger.Error("graceful shutdown failed", "error", err)

@@ -1,4 +1,4 @@
-.PHONY: api-run worker-run api-test api-vet api-fmt migrate-run db-up db-down river-migrate-up river-migrate-down sqlc openapi-go openapi-ts arch-lint db-lint images-web images-backend k8s-build
+.PHONY: api-run worker-run api-test api-vet api-fmt migrate-run db-up db-down river-migrate-up river-migrate-down sqlc openapi-go openapi-ts arch-lint db-lint images-web images-backend k8s-build edge-validate
 
 api-run:
 	cd services/api && go run ./cmd/api
@@ -53,6 +53,14 @@ images-backend:
 	docker buildx build --load --build-arg APP=worker --file services/api/Dockerfile --tag flowlesshub-worker:dev .
 	docker buildx build --load --build-arg APP=migrate --file services/api/Dockerfile --tag flowlesshub-migrate:dev .
 
+edge-validate:
+	bash scripts/k8s/validate-edge-config.sh
+	bash scripts/k8s/validate-edge-manifests.sh
+
 k8s-build:
 	go run sigs.k8s.io/kustomize/kustomize/v5@v5.8.3 build deploy/k8s/base > /dev/null
 	go run sigs.k8s.io/kustomize/kustomize/v5@v5.8.3 build deploy/k8s/migrations > /dev/null
+	go run sigs.k8s.io/kustomize/kustomize/v5@v5.8.3 build deploy/k8s/overlays/local > /dev/null
+	go run sigs.k8s.io/kustomize/kustomize/v5@v5.8.3 build deploy/k8s/overlays/green > /dev/null
+	go run sigs.k8s.io/kustomize/kustomize/v5@v5.8.3 build deploy/k8s/overlays/production > /dev/null
+	go run sigs.k8s.io/kustomize/kustomize/v5@v5.8.3 build deploy/k8s/overlays/production-green > /dev/null
