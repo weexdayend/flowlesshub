@@ -173,6 +173,25 @@ jobs:
       - name: Validate VPS shell scripts
         shell: bash
         run: |
+          mapfile -t vps_scripts < <(git ls-files -- 'scripts/vps/*.sh')
+          if ((${#vps_scripts[@]} == 0)); then
+            echo "::error::No tracked VPS shell scripts found."
+            exit 1
+          fi
+
+          for script in "${vps_scripts[@]}"; do
+            entry="$(git ls-files --stage -- "$script")"
+            mode="${entry%% *}"
+            if [[ "$mode" != "100755" ]]; then
+              echo "::error::VPS shell script must be tracked as executable (100755): $script (found $mode)"
+              exit 1
+            fi
+            if [[ ! -x "$script" ]]; then
+              echo "::error::VPS shell script checkout is not executable: $script"
+              exit 1
+            fi
+          done
+
           for script in scripts/vps/*.sh; do
             bash -n "$script"
           done
