@@ -158,3 +158,69 @@ jobs:
         run: make k8s-build
       - name: Validate Caddy edge configuration
         run: make edge-validate
+
+  vps-deployment:
+    name: VPS deployment config gates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install ShellCheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes shellcheck
+
+      - name: Validate VPS shell scripts
+        shell: bash
+        run: |
+          for script in scripts/vps/*.sh; do
+            bash -n "$script"
+          done
+          shellcheck --severity=warning scripts/vps/*.sh
+
+      - name: Prepare non-secret Compose validation fixture
+        shell: bash
+        run: |
+          mkdir -p .vps-runtime/caddy
+          cat > "$RUNNER_TEMP/flowlesshub-vps-ci.env" <<'ENV'
+          FLOWLESSHUB_GHCR_OWNER=weexdayend
+          FLOWLESSHUB_BLUE_RELEASE=sha-0000000000000000000000000000000000000000
+          FLOWLESSHUB_GREEN_RELEASE=sha-0000000000000000000000000000000000000000
+          FLOWLESSHUB_WORKER_RELEASE=sha-0000000000000000000000000000000000000000
+          FLOWLESSHUB_MIGRATE_RELEASE=sha-0000000000000000000000000000000000000000
+          FLOWLESSHUB_DB_NAME=flowlesshub
+          FLOWLESSHUB_DB_USER=flowlesshub
+          FLOWLESSHUB_DB_PASSWORD=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+          FLOWLESSHUB_MIN_AVAILABLE_MIB=384
+          ENV
+
+      - name: Validate VPS Docker Compose configuration
+        run: docker compose --env-file "$RUNNER_TEMP/flowlesshub-vps-ci.env" -f deploy/compose/vps.compose.yaml config --quiet
+
+      - name: Validate both Caddy configurations
+        shell: bash
+        run: |
+          for color in blue green; do
+            docker run --rm --pull=always \
+              --volume "$GITHUB_WORKSPACE/deploy/vps/Caddyfile.$color:/etc/caddy/Caddyfile:ro" \
+              caddy:2.11.9-alpine \
+              caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+          done
+
+      - name: Validate additive Nginx virtual host configuration
+        shell: bash
+        run: |
+          validation_dir="$RUNNER_TEMP/flowlesshub-nginx-validation"
+          mkdir -p "$validation_dir/conf.d" "$validation_dir/certs"
+          openssl req -x509 -nodes -newkey rsa:2048 -days 1 \
+            -subj '/CN=flowlesshub-ci.invalid' \
+            -keyout "$validation_dir/certs/privkey.pem" \
+            -out "$validation_dir/certs/fullchain.pem"
+          sed \
+            -e 's# /etc/letsencrypt/live/flowlesshub.com/fullchain.pem# /tmp/flowlesshub-certs/fullchain.pem#g' \
+            -e 's# /etc/letsencrypt/live/flowlesshub.com/privkey.pem# /tmp/flowlesshub-certs/privkey.pem#g' \
+            deploy/vps/nginx/flowlesshub.conf > "$validation_dir/conf.d/flowlesshub.conf"
+          docker run --rm --pull=always \
+            --volume "$validation_dir/conf.d:/etc/nginx/conf.d:ro" \
+            --volume "$validation_dir/certs:/tmp/flowlesshub-certs:ro" \
+            nginx:1.24.0-alpine nginx -t

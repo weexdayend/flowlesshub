@@ -5,7 +5,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 ENV_FILE="$ROOT/.vps-runtime/.env"
 COMPOSE_FILE="$ROOT/deploy/compose/vps.compose.yaml"
 
-for command in docker curl openssl awk df ss grep sed systemctl; do
+for command in docker curl openssl awk df ss grep sed systemctl stat git flock readlink cmp mktemp; do
   command -v "$command" >/dev/null 2>&1 || { echo "Missing required command: $command" >&2; exit 1; }
 done
 
@@ -14,6 +14,9 @@ docker compose version >/dev/null
 systemctl is-active --quiet nginx || { echo "Host Nginx must remain active; refusing deployment." >&2; exit 1; }
 [[ -f "$ENV_FILE" ]] || { echo "Missing $ENV_FILE. Follow the VPS runbook first." >&2; exit 1; }
 [[ -f "$COMPOSE_FILE" ]] || { echo "Missing Compose file: $COMPOSE_FILE" >&2; exit 1; }
+ENV_MODE="$(stat -c '%a' "$ENV_FILE")"
+[[ "$ENV_MODE" == "600" ]] || { echo "Runtime .env must have mode 600 (current: $ENV_MODE). Run chmod 600 .vps-runtime/.env." >&2; exit 1; }
+git -C "$ROOT" check-ignore -q "$ENV_FILE" || { echo "Runtime .env is not ignored by Git; refusing to continue." >&2; exit 1; }
 
 get_env() {
   local key="$1"
@@ -28,7 +31,9 @@ DB_PASSWORD="$(get_env FLOWLESSHUB_DB_PASSWORD)"
 [[ "$DB_PASSWORD" =~ ^[0-9a-f]{64}$ ]] || { echo "FLOWLESSHUB_DB_PASSWORD must be a generated 64-hex-character password; do not use the example placeholder." >&2; exit 1; }
 unset DB_PASSWORD
 
+# shellcheck disable=SC2016 # AWK owns the positional fields in these single-quoted programs.
 available_mib="$(awk '/MemAvailable:/ {printf "%d", $2/1024}' /proc/meminfo)"
+# shellcheck disable=SC2016 # AWK owns the positional fields in these single-quoted programs.
 disk_available_kib="$(df -Pk "$ROOT" | awk 'NR==2 {print $4}')"
 disk_available_gib="$((disk_available_kib / 1024 / 1024))"
 
@@ -45,9 +50,14 @@ if (( disk_available_gib < 5 )); then
 fi
 
 for port in 3032 5052; do
+  # shellcheck disable=SC2016 # AWK owns the positional field in this single-quoted program.
   if ss -ltn | awk '{print $4}' | grep -Eq "(^|:|\\])${port}$"; then
-    echo "Host port ${port} is already occupied; inspect it before continuing." >&2
-    exit 1
+    owner="$(docker ps -q --filter "label=com.docker.compose.project=flowlesshub-vps" --filter "publish=${port}" | head -n 1)"
+    if [[ -z "$owner" ]]; then
+      echo "Host port ${port} is occupied by a process/container outside the FlowlessHub Compose edge; inspect it before continuing." >&2
+      exit 1
+    fi
+    echo "Host port ${port} is already published by the FlowlessHub edge; allowing a safe resume."
   fi
 done
 

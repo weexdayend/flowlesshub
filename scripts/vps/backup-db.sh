@@ -22,7 +22,7 @@ cleanup_incomplete_backup() {
 trap cleanup_incomplete_backup EXIT
 
 docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" exec -T postgres sh -ec \
-  'exec pg_dump --format=custom --no-owner --username="$POSTGRES_USER" --dbname="$POSTGRES_DB"' > "$OUT"
+  "exec pg_dump --format=custom --no-owner --username=\"\$POSTGRES_USER\" --dbname=\"\$POSTGRES_DB\"" > "$OUT"
 docker run --rm -v "$BACKUP_DIR:/backups:ro" postgres:17.11-alpine \
   pg_restore --list "/backups/$(basename "$OUT")" >/dev/null
 validated=1

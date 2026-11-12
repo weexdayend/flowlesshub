@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
   packages: write
 
 concurrency:
@@ -14,7 +15,43 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  verify-release:
+    name: Verify release commit and CI
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Check out full history
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Verify release commit belongs to main
+        shell: bash
+        run: |
+          git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || {
+            echo "::error::Release tag must point to a commit reachable from origin/main."
+            exit 1
+          }
+
+      - name: Require successful main CI for the exact commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          run_count="$(gh api \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?branch=main&head_sha=${GITHUB_SHA}&per_page=100" \
+            --jq '[.workflow_runs[] | select(.event == "push" and .status == "completed" and .conclusion == "success" and .head_sha == env.GITHUB_SHA)] | length')"
+          if [[ "$run_count" -lt 1 ]]; then
+            echo "::error::No successful push CI run found for release commit $GITHUB_SHA on main."
+            exit 1
+          fi
+          echo "Found $run_count successful main CI run(s) for $GITHUB_SHA."
+
   publish:
+    needs: verify-release
     name: Build and publish ${{ matrix.image }}
     runs-on: ubuntu-latest
     strategy:
