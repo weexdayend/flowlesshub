@@ -48,7 +48,9 @@ class BackupAlertTests(unittest.TestCase):
         opener.open.return_value = response
         normalized_url = backup_alert.validate_webhook_url(VALID_URL)
 
-        message_id = backup_alert.post_message(normalized_url, "test", opener=opener)
+        message_id = backup_alert.post_message(
+            normalized_url, backup_alert.build_message("test", {}), opener=opener
+        )
 
         self.assertEqual(message_id, "123456789012345678")
         request = opener.open.call_args.args[0]
@@ -69,10 +71,24 @@ class BackupAlertTests(unittest.TestCase):
                 with self.assertRaises(backup_alert.AlertDeliveryError):
                     backup_alert.validate_webhook_url(value)
 
-    def test_message_disables_mentions(self) -> None:
-        message = backup_alert.build_message("test", {})
-        self.assertIn("Manual Discord delivery test", message)
-        self.assertNotIn("@everyone", message)
+    def test_manual_test_embed_is_informative_and_explicitly_non_production(self) -> None:
+        embed = backup_alert.build_message("test", {})
+        self.assertEqual(embed["title"], "Discord alert channel connected")
+        self.assertIn("no backup job was started", embed["description"])
+        fields = {field["name"]: field["value"] for field in embed["fields"]}
+        self.assertEqual(fields["STATUS"], "DELIVERY TEST")
+        self.assertEqual(fields["BACKUP EXECUTION"], "Not started")
+        self.assertIn("WIB", fields["TIME"])
+        self.assertTrue(embed["timestamp"].endswith("Z"))
+        self.assertNotIn("@everyone", json.dumps(embed))
+
+    def test_discord_payload_uses_embed_and_disables_mentions(self) -> None:
+        payload = backup_alert.build_discord_payload(backup_alert.build_message("test", {}))
+        self.assertEqual(payload["username"], "FlowlessHub Backup Ops")
+        self.assertEqual(payload["allowed_mentions"], {"parse": []})
+        self.assertEqual(len(payload["embeds"]), 1)
+        self.assertNotIn("content", payload)
+        self.assertIn("fields", payload["embeds"][0])
 
     def test_success_context_must_match_backup_unit(self) -> None:
         env = {
@@ -91,9 +107,30 @@ class BackupAlertTests(unittest.TestCase):
             "MONITOR_EXIT_CODE": "exited",
             "MONITOR_EXIT_STATUS": "0",
         }
-        message = backup_alert.build_message("success", env)
-        self.assertIn("Off-site state is stage-specific", message)
-        self.assertNotIn("R2 upload succeeded", message)
+        embed = backup_alert.build_message("success", env)
+        self.assertIn("service-level result only", embed["description"])
+        fields = {field["name"]: field["value"] for field in embed["fields"]}
+        self.assertEqual(fields["OFF-SITE STATUS"], "Not inferred — inspect the backup stage journal.")
+        self.assertNotIn("R2 upload succeeded", json.dumps(embed))
+
+    def test_failure_embed_includes_actionable_journal_command(self) -> None:
+        env = {
+            "MONITOR_UNIT": "flowlesshub-backup.service",
+            "MONITOR_SERVICE_RESULT": "exit-code",
+            "MONITOR_EXIT_CODE": "exited",
+            "MONITOR_EXIT_STATUS": "1",
+        }
+        embed = backup_alert.build_message("failure", env)
+        self.assertEqual(embed["title"], "Backup workflow failed")
+        fields = {field["name"]: field["value"] for field in embed["fields"]}
+        self.assertEqual(fields["STATUS"], "ACTION REQUIRED")
+        self.assertIn("journalctl -u flowlesshub-backup.service", fields["NEXT STEP"])
+
+    def test_embed_payload_rejects_oversized_field(self) -> None:
+        embed = backup_alert.build_message("test", {})
+        embed["fields"][0]["value"] = "x" * 1025
+        with self.assertRaisesRegex(backup_alert.AlertDeliveryError, "message_embed_invalid"):
+            backup_alert.build_discord_payload(embed)
 
     def test_failure_context_requires_actual_failure(self) -> None:
         env = {
@@ -109,12 +146,15 @@ class BackupAlertTests(unittest.TestCase):
         opener = Mock()
         response = FakeResponse(json.dumps({"id": "123456789012345678"}).encode())
         opener.open.return_value = response
-        message_id = backup_alert.post_message(VALID_URL, "test", opener=opener)
+        embed = backup_alert.build_message("test", {})
+        message_id = backup_alert.post_message(VALID_URL, embed, opener=opener)
         self.assertEqual(message_id, "123456789012345678")
         self.assertTrue(response.closed)
         request = opener.open.call_args.args[0]
         self.assertTrue(request.full_url.endswith("?wait=true"))
-        self.assertEqual(json.loads(request.data)["allowed_mentions"], {"parse": []})
+        payload = json.loads(request.data)
+        self.assertEqual(payload["allowed_mentions"], {"parse": []})
+        self.assertEqual(payload["embeds"][0]["title"], embed["title"])
 
     def test_post_retries_explicit_429_with_bounded_retry_after(self) -> None:
         opener = Mock()
@@ -127,7 +167,7 @@ class BackupAlertTests(unittest.TestCase):
         )
         opener.open.side_effect = [rate_limit, FakeResponse(b'{"id":"123456789012345678"}')]
         sleep = Mock()
-        message_id = backup_alert.post_message(VALID_URL, "test", opener=opener, sleep_fn=sleep)
+        message_id = backup_alert.post_message(VALID_URL, backup_alert.build_message("test", {}), opener=opener, sleep_fn=sleep)
         self.assertEqual(message_id, "123456789012345678")
         sleep.assert_called_once_with(0.25)
         self.assertEqual(opener.open.call_count, 2)
@@ -138,7 +178,7 @@ class BackupAlertTests(unittest.TestCase):
             VALID_URL, 500, "server error", {}, io.BytesIO(b"ignored")
         )
         with self.assertRaisesRegex(backup_alert.AlertDeliveryError, "http_500"):
-            backup_alert.post_message(VALID_URL, "test", opener=opener)
+            backup_alert.post_message(VALID_URL, backup_alert.build_message("test", {}), opener=opener)
         self.assertEqual(opener.open.call_count, 1)
 
     def test_post_rejects_rate_limit_wait_over_budget(self) -> None:
@@ -147,20 +187,20 @@ class BackupAlertTests(unittest.TestCase):
             VALID_URL, 429, "rate limited", {"Retry-After": "10"}, io.BytesIO(b"{}")
         )
         with self.assertRaisesRegex(backup_alert.AlertDeliveryError, "outside_budget"):
-            backup_alert.post_message(VALID_URL, "test", opener=opener)
+            backup_alert.post_message(VALID_URL, backup_alert.build_message("test", {}), opener=opener)
         self.assertEqual(opener.open.call_count, 1)
 
     def test_post_rejects_response_without_message_id(self) -> None:
         opener = Mock()
         opener.open.return_value = FakeResponse(b'{"type":0}')
         with self.assertRaisesRegex(backup_alert.AlertDeliveryError, "message_id_missing"):
-            backup_alert.post_message(VALID_URL, "test", opener=opener)
+            backup_alert.post_message(VALID_URL, backup_alert.build_message("test", {}), opener=opener)
 
     def test_post_does_not_retry_transport_timeout(self) -> None:
         opener = Mock()
         opener.open.side_effect = TimeoutError("synthetic timeout")
         with self.assertRaisesRegex(backup_alert.AlertDeliveryError, "outcome_unknown_no_retry"):
-            backup_alert.post_message(VALID_URL, "test", opener=opener)
+            backup_alert.post_message(VALID_URL, backup_alert.build_message("test", {}), opener=opener)
         self.assertEqual(opener.open.call_count, 1)
 
     def test_synthetic_systemd_events_are_explicitly_labeled(self) -> None:
@@ -180,9 +220,12 @@ class BackupAlertTests(unittest.TestCase):
         }
         for event, context in fixtures.items():
             with self.subTest(event=event):
-                message = backup_alert.build_message(event, context)
-                self.assertIn("[TEST — SYNTHETIC", message)
-                self.assertIn("disposable systemd lifecycle test", message)
+                embed = backup_alert.build_message(event, context)
+                self.assertIn("Synthetic lifecycle hook", embed["title"])
+                self.assertIn("disposable fixture", embed["description"])
+                fields = {field["name"]: field["value"] for field in embed["fields"]}
+                self.assertIn("HOOK", fields)
+                self.assertEqual(fields["BACKUP EXECUTION"], "Not started")
 
     def test_synthetic_event_rejects_unexpected_source_unit(self) -> None:
         env = {

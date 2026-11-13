@@ -106,24 +106,60 @@ def _retry_after_seconds(headers: Any, body: bytes) -> float | None:
     return delay
 
 
+def build_discord_payload(embed: Mapping[str, Any]) -> dict[str, Any]:
+    """Wrap one validated operational embed in a mention-safe Discord payload."""
+    if not isinstance(embed, Mapping):
+        raise AlertDeliveryError("message_embed_invalid")
+
+    title = embed.get("title")
+    description = embed.get("description")
+    fields = embed.get("fields", [])
+    if (
+        not isinstance(title, str)
+        or not title
+        or len(title) > 256
+        or not isinstance(description, str)
+        or len(description) > 4096
+        or not isinstance(fields, list)
+        or len(fields) > 25
+    ):
+        raise AlertDeliveryError("message_embed_invalid")
+
+    for field in fields:
+        if (
+            not isinstance(field, Mapping)
+            or not isinstance(field.get("name"), str)
+            or not field["name"]
+            or len(field["name"]) > 256
+            or not isinstance(field.get("value"), str)
+            or not field["value"]
+            or len(field["value"]) > 1024
+        ):
+            raise AlertDeliveryError("message_embed_invalid")
+
+    return {
+        "username": "FlowlessHub Backup Ops",
+        "embeds": [dict(embed)],
+        "allowed_mentions": {"parse": []},
+    }
+
+
 def post_message(
     webhook_url: str,
-    content: str,
+    embed: Mapping[str, Any],
     *,
     opener: Any | None = None,
     sleep_fn: Any = time.sleep,
     monotonic_fn: Any = time.monotonic,
 ) -> str:
-    """Post one message; retry only an explicit Discord 429 rejection."""
-    if not content or len(content) > 1900:
-        raise AlertDeliveryError("message_content_invalid")
+    """Post one embed; retry only an explicit Discord 429 rejection."""
+    payload = json.dumps(
+        build_discord_payload(embed),
+        separators=(",", ":"),
+    ).encode("utf-8")
 
     target = validate_webhook_url(webhook_url)
     client = opener or urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirectHandler())
-    payload = json.dumps(
-        {"content": content, "allowed_mentions": {"parse": []}},
-        separators=(",", ":"),
-    ).encode("utf-8")
     deadline = monotonic_fn() + TOTAL_BUDGET_SECONDS
 
     for attempt in range(1, MAX_ATTEMPTS + 1):
@@ -204,40 +240,98 @@ def _monitor_values(environment: Mapping[str, str]) -> tuple[str, str, str, str]
     return unit, result, exit_code, exit_status
 
 
-def build_message(event: str, environment: Mapping[str, str] | None = None) -> str:
-    env = environment if environment is not None else os.environ
-    now_utc = datetime.now(timezone.utc)
+def _build_embed(
+    *,
+    title: str,
+    description: str,
+    color: int,
+    fields: list[tuple[str, str, bool]],
+    now_utc: datetime,
+) -> dict[str, Any]:
+    """Build a compact, structured Discord embed with explicit UTC/WIB timing."""
+    return {
+        "title": title,
+        "description": description,
+        "color": color,
+        "fields": [
+            {"name": name, "value": value, "inline": inline}
+            for name, value, inline in fields
+        ],
+        "footer": {"text": "FLOWLESSHUB • BACKUP OPERATIONS"},
+        "timestamp": now_utc.isoformat(timespec="seconds").replace("+00:00", "Z"),
+    }
+
+
+def _time_field(now_utc: datetime) -> str:
     now_wib = now_utc.astimezone(timezone(timedelta(hours=7)))
-    timestamp = f"{now_utc:%Y-%m-%d %H:%M:%S} UTC / {now_wib:%Y-%m-%d %H:%M:%S} WIB"
+    return f"{now_wib:%d %b %Y · %H:%M:%S} WIB\n{now_utc:%d %b %Y · %H:%M:%S} UTC"
+
+
+def build_message(event: str, environment: Mapping[str, str] | None = None) -> dict[str, Any]:
+    """Build a sanitized, event-specific Discord embed."""
+    env = environment if environment is not None else os.environ
+    now_utc = datetime.now(timezone.utc).replace(microsecond=0)
+    time_value = _time_field(now_utc)
 
     if event == "test":
-        return (
-            "[TEST] FlowlessHub backup alert delivery\n"
-            "Manual Discord delivery test. No backup service was started.\n"
-            f"Time: {timestamp}"
+        return _build_embed(
+            title="Discord alert channel connected",
+            description=(
+                "This is a manual webhook delivery test. It verifies the notification path only; "
+                "no backup job was started."
+            ),
+            color=0x5865F2,
+            fields=[
+                ("STATUS", "DELIVERY TEST", True),
+                ("TRIGGER", "Manual systemd test", True),
+                ("BACKUP EXECUTION", "Not started", True),
+                ("TARGET SERVICE", "flowlesshub-backup.service", False),
+                ("TIME", time_value, False),
+            ],
+            now_utc=now_utc,
         )
 
     unit, result, exit_code, exit_status = _monitor_values(env)
     if event == "success":
         if unit != "flowlesshub-backup.service" or result != "success" or exit_code != "exited" or exit_status != "0":
             raise AlertDeliveryError("backup_success_event_context_mismatch")
-        return (
-            "[SUCCESS] FlowlessHub scheduled backup workflow\n"
-            "The backup orchestrator exited successfully. Off-site state is stage-specific; "
-            "consult the backup service journal for local/off-site/retention details.\n"
-            f"Result: {result} · Exit: {exit_code}/{exit_status}\n"
-            f"Time: {timestamp}"
+        return _build_embed(
+            title="Backup workflow completed",
+            description=(
+                "The backup orchestrator exited successfully. This confirms the service-level "
+                "result only; local backup, off-site upload, and retention details remain stage-specific."
+            ),
+            color=0x2ECC71,
+            fields=[
+                ("STATUS", "SUCCESS", True),
+                ("SERVICE", unit, True),
+                ("SYSTEMD RESULT", result, True),
+                ("PROCESS EXIT", f"{exit_code} / {exit_status}", True),
+                ("OFF-SITE STATUS", "Not inferred — inspect the backup stage journal.", False),
+                ("TIME", time_value, False),
+            ],
+            now_utc=now_utc,
         )
 
     if event == "failure":
         if unit != "flowlesshub-backup.service" or result == "success":
             raise AlertDeliveryError("backup_failure_event_context_mismatch")
-        return (
-            "[FAILURE] FlowlessHub scheduled backup workflow\n"
-            "The backup orchestrator did not complete successfully. Investigate the "
-            "systemd journal; this alert does not infer which stage failed.\n"
-            f"Result: {result} · Exit: {exit_code}/{exit_status}\n"
-            f"Time: {timestamp}"
+        return _build_embed(
+            title="Backup workflow failed",
+            description=(
+                "The backup orchestrator did not complete successfully. Check the service journal "
+                "to identify the failed stage; this notification does not guess the cause."
+            ),
+            color=0xE74C3C,
+            fields=[
+                ("STATUS", "ACTION REQUIRED", True),
+                ("SERVICE", unit, True),
+                ("SYSTEMD RESULT", result, True),
+                ("PROCESS EXIT", f"{exit_code} / {exit_status}", True),
+                ("NEXT STEP", "Review: `journalctl -u flowlesshub-backup.service -n 80 --no-pager`", False),
+                ("TIME", time_value, False),
+            ],
+            now_utc=now_utc,
         )
 
     synthetic = {
@@ -248,14 +342,28 @@ def build_message(event: str, environment: Mapping[str, str] | None = None) -> s
         expected_unit, expected_result, expected_code, expected_status = synthetic[event]
         if unit != expected_unit or exit_code != expected_code or exit_status != expected_status:
             raise AlertDeliveryError("synthetic_event_context_mismatch")
-        if expected_result is not None and result != expected_result:
+        if result != expected_result:
             raise AlertDeliveryError("synthetic_event_context_mismatch")
-        kind = "SUCCESS" if event == "test-success" else "FAILURE"
-        return (
-            f"[TEST — SYNTHETIC {kind}] FlowlessHub backup alert hook\n"
-            "This is a disposable systemd lifecycle test, not a production backup event.\n"
-            f"Source: {unit} · Result: {result} · Exit: {exit_code}/{exit_status}\n"
-            f"Time: {timestamp}"
+
+        is_success = event == "test-success"
+        kind = "SUCCESS" if is_success else "FAILURE"
+        return _build_embed(
+            title=f"Synthetic lifecycle hook · {kind.lower()}",
+            description=(
+                "This notification confirms the test hook fired. It is a disposable fixture, "
+                "not a production backup event; no backup job was started."
+            ),
+            color=0x2ECC71 if is_success else 0xF1C40F,
+            fields=[
+                ("TEST RESULT", f"{kind} HOOK", True),
+                ("HOOK", "OnSuccess" if is_success else "OnFailure", True),
+                ("SOURCE UNIT", unit, False),
+                ("SOURCE RESULT", result, True),
+                ("SOURCE EXIT", f"{exit_code} / {exit_status}", True),
+                ("BACKUP EXECUTION", "Not started", True),
+                ("TIME", time_value, False),
+            ],
+            now_utc=now_utc,
         )
 
     raise AlertDeliveryError("unsupported_event")
@@ -274,9 +382,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     try:
-        message = build_message(args.event)
+        embed = build_message(args.event)
         webhook_url = read_webhook_credential()
-        message_id = post_message(webhook_url, message)
+        message_id = post_message(webhook_url, embed)
     except AlertDeliveryError as exc:
         print(
             f"ALERT_DELIVERY_RESULT=failure event={args.event} reason={exc}",
