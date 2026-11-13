@@ -42,6 +42,18 @@ class BackupAlertTests(unittest.TestCase):
         result = backup_alert.validate_webhook_url(VALID_URL)
         self.assertEqual(result, VALID_URL + "?wait=true")
 
+    def test_post_accepts_prevalidated_webhook_url(self) -> None:
+        opener = Mock()
+        response = FakeResponse(json.dumps({"id": "123456789012345678"}).encode())
+        opener.open.return_value = response
+        normalized_url = backup_alert.validate_webhook_url(VALID_URL)
+
+        message_id = backup_alert.post_message(normalized_url, "test", opener=opener)
+
+        self.assertEqual(message_id, "123456789012345678")
+        request = opener.open.call_args.args[0]
+        self.assertEqual(request.full_url, normalized_url)
+
     def test_webhook_rejects_non_discord_host_and_redirect_parameters(self) -> None:
         bad_urls = (
             "http://discord.com/api/webhooks/1/token",

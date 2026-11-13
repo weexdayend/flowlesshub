@@ -36,7 +36,7 @@ class AlertDeliveryError(Exception):
 
 
 def validate_webhook_url(value: str) -> str:
-    """Accept only a Discord HTTPS incoming-webhook URL without extra query data."""
+    """Accept a Discord HTTPS webhook URL, including the normalized wait=true URL."""
     candidate = value.strip()
     try:
         parsed = urllib.parse.urlsplit(candidate)
@@ -50,7 +50,7 @@ def validate_webhook_url(value: str) -> str:
         or parsed.username is not None
         or parsed.password is not None
         or port not in (None, 443)
-        or parsed.query
+        or parsed.query not in ("", "wait=true")
         or parsed.fragment
         or not WEBHOOK_PATH.fullmatch(parsed.path)
     ):
