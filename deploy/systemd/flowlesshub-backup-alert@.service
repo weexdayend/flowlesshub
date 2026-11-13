@@ -1,0 +1,28 @@
+[Unit]
+Description=FlowlessHub backup Discord alert (%i)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/opt/flowlesshub
+LoadCredential=discord-webhook-url:/opt/flowlesshub/.vps-runtime/discord-webhook-url
+UMask=0077
+TimeoutStartSec=30s
+TimeoutStopSec=5s
+ExecStart=/usr/bin/python3 -B /opt/flowlesshub/scripts/vps/backup-alert.py --event=%i
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectHostname=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+CapabilityBoundingSet=

@@ -3,6 +3,8 @@ Description=FlowlessHub PostgreSQL backup, off-site upload, and local retention 
 Wants=network-online.target
 After=network-online.target docker.service
 Requires=docker.service
+OnSuccess=flowlesshub-backup-alert@success.service
+OnFailure=flowlesshub-backup-alert@failure.service
 
 [Service]
 Type=oneshot

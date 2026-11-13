@@ -43,7 +43,7 @@
 | S0.8 | Caddy edge and Blue/Green deployment foundation / edge validation repair | `IMPLEMENTED; ACCEPTANCE RECORD NEEDS RECONCILIATION` | Edge repair commit `e8f33bb7c0e92d4c49724dadde55d2378cbfddce`; repair history also documents earlier base `f949f896514cb871d1cbaeb2c01aac3195d6e546` | Run #26 on `e8f33...` passed per the S0.9 VPS runbook; the S0.8 repair acceptance file says it does not claim acceptance | Do not infer production acceptance from CI | [Slice](docs/slices/S0.8-caddy-edge-blue-green.md), [Acceptance](docs/acceptance/S0.8-edge-validation-repair.md), [Runbook](docs/runbooks/S0.8-caddy-edge-blue-green.md). Reconcile the acceptance record from evidence; preserve historical facts. |
 | S0.9 | VPS-first Compose Blue/Green delivery hardening | `IMPLEMENTED; RUNTIME ACCEPTANCE PENDING IN CURRENT RECORD` | Foundation `e8f33...`; hardening commit `20558818bca599782c822e9e3851e64cb979c369`; executable-mode fix `2bfdc36106df4a65dad410e8c71e91cd580de21d` | Baseline CI run #26 passed; later exact-SHA evidence must be read from GitHub | Current S0.9 acceptance document still marks VPS runtime acceptance pending; do not silently change it | [New slice](docs/slices/S0.9-vps-first-hardening.md), [Acceptance](docs/acceptance/S0.9-vps-first-hardening.md), [Runbook](docs/runbooks/S0.9-vps-blue-green-deployment.md). Owner/runtime evidence reconciliation remains a follow-up. |
 | S0.10 | Backup integrity and isolated restore drill | `CLOSED` | Implementation accepted at `94536d65317aa513bdc715a39fbce2789dbb8709`; scripts first hardened at `2bfdc36106df4a65dad410e8c71e91cd580de21d` | Run #29 / `43189431464` passed on exact accepted SHA | Owner accepted actual backup, off-host workstation checksum, isolated restore, production post-checks, and Petshop isolation on 12 Nov 2026 | [Slice](docs/slices/S0.10-backup-restore-drill.md), [Acceptance](docs/acceptance/S0.10-backup-restore-drill.md), [Runbook](docs/runbooks/S0.10-backup-restore-drill.md). Do not repeat the S0.10 drill merely to reconfirm it. |
-| S0.11 | Scheduled backup operations, retention, and off-site recovery | `RUNTIME VERIFIED — BACKUP / OFF-SITE / RETENTION; ALERT & OWNER ACCEPTANCE PENDING` | Initial package against `94536d65317aa513bdc715a39fbce2789dbb8709`; current source `ad42e16bff5adc2b5c5a467d655066dd2586be50` | Run #32 / `43274241744` passed on `0bb29c1`; Run #33 / `43334005808` passed on `ad42e16`; all three CI jobs in each run passed | Manual systemd backup succeeded; local checksum, R2 archive-triplet read-back, Restic check + full data read (2/2 packs), retention dry-run, resource guards and Petshop isolation verified on 13 Nov 2026; timer disabled/inactive | [Slice](docs/slices/S0.11-scheduled-backup-operations.md), [Acceptance](docs/acceptance/S0.11-scheduled-backup-operations.md), [Runbook](docs/runbooks/S0.11-scheduled-backup-operations.md). External alert destination/test and explicit owner acceptance remain pending; timer activation, local deletion and remote prune are not authorized. |
+| S0.11 | Scheduled backup operations, retention, and off-site recovery | `RUNTIME VERIFIED — BACKUP / OFF-SITE / RETENTION; ALERT & OWNER ACCEPTANCE PENDING` | Initial package against `94536d65317aa513bdc715a39fbce2789dbb8709`; current source `ad42e16bff5adc2b5c5a467d655066dd2586be50` | Run #32 / `43274241744` passed on `0bb29c1`; Run #33 / `43334005808` passed on `ad42e16`; all three CI jobs in each run passed | Manual systemd backup succeeded; local checksum, R2 archive-triplet read-back, Restic check + full data read (2/2 packs), retention dry-run, resource guards and Petshop isolation verified on 13 Nov 2026; timer disabled/inactive | [Slice](docs/slices/S0.11-scheduled-backup-operations.md), [Acceptance](docs/acceptance/S0.11-scheduled-backup-operations.md), [Runbook](docs/runbooks/S0.11-scheduled-backup-operations.md). Discord Incoming Webhook selected; source patch, VPS credential provisioning, actual delivery test, and explicit owner acceptance remain pending; timer activation, local deletion and remote prune are not authorized. |
 
 ### Status reconciliation notes
 
@@ -76,7 +76,7 @@ The current package defaults are fail-closed:
 - systemd timer unit is installed but disabled and inactive; approved schedule is daily `20:00 UTC` with up to 15 minutes random delay;
 - Cloudflare R2 is the approved provider; bucket is `flowlesshub`, region `auto`; credentials have been rotated, the Restic password recovery copy is held outside the VPS, and the repository is initialized. Off-site flag is reset to `0` outside a controlled manual run;
 - retention dry-run is configured for keep-last 2; local deletion remains disabled (`ALLOW_DELETE=0`) and auto-prune remains disabled (`AUTO_PRUNE=0`);
-- external alerting is required and approved, but destination/channel, configuration, and delivery test remain pending; RPO/RTO are not agreed;
+- Discord Incoming Webhook selected by owner on 13 November 2026; source integration is prepared, while protected VPS credential provisioning and actual delivery test remain pending; RPO/RTO are not agreed;
 - no restore is scheduled automatically;
 - no production or Petshop service is restarted or modified by the proposed backup workflow.
 
@@ -90,7 +90,7 @@ The current package defaults are fail-closed:
 | Local retention count | Approved: keep two newest; dry-run only | Runtime dry-run validation |
 | Local deletion permission | Not approved; disabled | Any future `--apply` requires separate approval |
 | Remote Restic retention/prune policy | Not designed | Remote snapshot pruning |
-| Alert destination | External alerting approved; specific channel/endpoint and delivery test pending | Timer activation |
+| Alert destination | Discord Incoming Webhook selected; protected VPS credential and end-to-end delivery pending | Timer activation |
 | Recurring restore-drill cadence | Not selected; never auto-run by this timer | Restore schedule |
 | RPO / RTO | Not agreed | Any formal recovery objective claim |
 
@@ -99,7 +99,7 @@ The current package defaults are fail-closed:
 1. Reconcile S0.8 and S0.9 acceptance documents against exact source/CI/runtime evidence without rewriting historical baselines.
 2. After item 4 passes, obtain explicit owner acceptance of S0.11. Keep timer disabled until separately authorized.
 3. Design and validate remote Restic retention/prune policy separately; the S0.11 local retention script does not prune remote snapshots.
-4. Select and validate the approved external alert destination; do not activate the timer until a test notification is received.
+4. Provision and validate the selected Discord Incoming Webhook; do not activate the timer until manual delivery, synthetic hooks, and required acceptance evidence are recorded.
 5. Define and rehearse recurring isolated restore cadence and service-level RPO/RTO after owner approval.
 6. Keep broader S0 exit requirements open until the full S0 definition of done is evidenced.
 

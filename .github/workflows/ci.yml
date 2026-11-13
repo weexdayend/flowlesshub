@@ -197,6 +197,49 @@ jobs:
           done
           shellcheck --severity=warning scripts/vps/*.sh
 
+      - name: Test backup Discord alert notifier
+        run: python3 -m unittest scripts/vps/test_backup_alert.py -v
+
+      - name: Validate FlowlessHub backup systemd units
+        shell: bash
+        run: |
+          validation_dir="$RUNNER_TEMP/flowlesshub-systemd-validation"
+          mkdir -p "$validation_dir/units"
+          if [[ -e /opt/flowlesshub || -L /opt/flowlesshub ]]; then
+            echo "::error::Unexpected /opt/flowlesshub path on CI runner; refusing to overwrite it."
+            exit 1
+          fi
+          cleanup() {
+            # Remove only the exact fixture files created by this CI step.
+            # rmdir removes directories only when empty; never recursively delete /opt data.
+            sudo rm -f -- \
+              /opt/flowlesshub/scripts/vps/scheduled-backup.sh \
+              /opt/flowlesshub/scripts/vps/backup-alert.py \
+              /opt/flowlesshub/.vps-runtime/discord-webhook-url
+            sudo rmdir -- /opt/flowlesshub/scripts/vps 2>/dev/null || true
+            sudo rmdir -- /opt/flowlesshub/scripts 2>/dev/null || true
+            sudo rmdir -- /opt/flowlesshub/.vps-runtime 2>/dev/null || true
+            sudo rmdir -- /opt/flowlesshub 2>/dev/null || true
+            rm -rf -- "$validation_dir"
+          }
+          trap cleanup EXIT
+          sudo mkdir -p /opt/flowlesshub/scripts/vps /opt/flowlesshub/.vps-runtime
+          sudo install -m 0755 scripts/vps/scheduled-backup.sh /opt/flowlesshub/scripts/vps/scheduled-backup.sh
+          sudo install -m 0644 scripts/vps/backup-alert.py /opt/flowlesshub/scripts/vps/backup-alert.py
+          sudo install -m 0600 /dev/null /opt/flowlesshub/.vps-runtime/discord-webhook-url
+          cat > "$validation_dir/units/docker.service" <<'UNIT'
+          [Unit]
+          Description=Temporary Docker dependency stub for systemd unit validation
+          [Service]
+          Type=oneshot
+          ExecStart=/usr/bin/true
+          UNIT
+          SYSTEMD_UNIT_PATH="$validation_dir/units:/etc/systemd/system:/usr/lib/systemd/system:/lib/systemd/system" \
+            systemd-analyze verify \
+              deploy/systemd/flowlesshub-backup.service \
+              deploy/systemd/flowlesshub-backup-alert@.service \
+              deploy/systemd/flowlesshub-backup.timer
+
       - name: Prepare non-secret Compose validation fixture
         shell: bash
         run: |
