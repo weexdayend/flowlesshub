@@ -40,19 +40,18 @@
 | S0.5 | Hybrid PQ TLS handshake verification | `ACCEPTED SUB-SLICE` | `d0fe4eb1b9c01ea8e24167c0663658f396818c88` | Run #13 passed on exact implementation SHA | In-process TLS handshake test passed; not production edge validation | [Slice](docs/slices/S0.5-pq-tls-handshake.md), [Runbook](docs/runbooks/S0.5-pq-tls-handshake.md). S0 remains open. |
 | S0.6 | OpenAPI Go strict-server generation | `HISTORICAL / OPEN` | Historical baseline in slice | Exact-HEAD owner generation/CI acceptance pending in recorded slice | Not a production runtime acceptance item | [Slice](docs/slices/S0.6-openapi-go-server-generation.md), [Runbook](docs/runbooks/S0.6-openapi-go-server-generation.md). |
 | S0.7 | Kubernetes deployment foundation and image gates | `IMPLEMENTED / LOCAL ACCEPTANCE RECORDED` | Accepted implementation `97c772b03d5d5cbe4b044412e5d3ec53b2e46d3f` | Run #22 passed on exact SHA | Local Kubernetes smoke acceptance passed; production acceptance and legacy Compose-project cleanup are not claimed | [Slice](docs/slices/S0.7-kubernetes-foundation.md), [Acceptance](docs/acceptance/S0.7-kubernetes-foundation.md), [Runbook](docs/runbooks/S0.7-kubernetes-foundation.md). |
-| S0.8 | Caddy edge and Blue/Green deployment foundation / edge validation repair | `IMPLEMENTED; ACCEPTANCE RECORD NEEDS RECONCILIATION` | Edge repair commit `e8f33bb7c0e92d4c49724dadde55d2378cbfddce`; repair history also documents earlier base `f949f896514cb871d1cbaeb2c01aac3195d6e546` | Run #26 on `e8f33...` passed per the S0.9 VPS runbook; the S0.8 repair acceptance file says it does not claim acceptance | Do not infer production acceptance from CI | [Slice](docs/slices/S0.8-caddy-edge-blue-green.md), [Acceptance](docs/acceptance/S0.8-edge-validation-repair.md), [Runbook](docs/runbooks/S0.8-caddy-edge-blue-green.md). Reconcile the acceptance record from evidence; preserve historical facts. |
-| S0.9 | VPS-first Compose Blue/Green delivery hardening | `IMPLEMENTED; RUNTIME ACCEPTANCE PENDING IN CURRENT RECORD` | Foundation `e8f33...`; hardening commit `20558818bca599782c822e9e3851e64cb979c369`; executable-mode fix `2bfdc36106df4a65dad410e8c71e91cd580de21d` | Baseline CI run #26 passed; later exact-SHA evidence must be read from GitHub | Current S0.9 acceptance document still marks VPS runtime acceptance pending; do not silently change it | [New slice](docs/slices/S0.9-vps-first-hardening.md), [Acceptance](docs/acceptance/S0.9-vps-first-hardening.md), [Runbook](docs/runbooks/S0.9-vps-blue-green-deployment.md). Owner/runtime evidence reconciliation remains a follow-up. |
+| S0.8 | Caddy edge and Blue/Green deployment foundation / edge validation repair | `CLOSED — OWNER ACCEPTED (13 Nov 2026)` | Edge repair commit `e8f33bb7c0e92d4c49724dadde55d2378cbfddce`; earlier repair base `f949f896514cb871d1cbaeb2c01aac3195d6e546` | CI Run #26 / `43147198165` passed on exact `e8f33...` (Frontend and Backend quality gates) | Owner confirmed manual S0.8 acceptance on 13 Nov 2026; the acceptance record documents the owner attestation without inventing unarchived terminal output | [Slice](docs/slices/S0.8-caddy-edge-blue-green.md), [Acceptance](docs/acceptance/S0.8-edge-validation-repair.md), [Runbook](docs/runbooks/S0.8-caddy-edge-blue-green.md). S0.8 slice is closed; the broader S0 exit gate remains separate. |
+| S0.9 | VPS-first Compose Blue/Green delivery hardening | `CLOSED — OWNER ACCEPTED (13 Nov 2026)` | Foundation `e8f33...`; hardening commit `20558818bca599782c822e9e3851e64cb979c369`; executable-mode fix `2bfdc36106df4a65dad410e8c71e91cd580de21d` | CI Run #27 / `43172335762` passed on `205588...`; CI Run #28 / `43179520063` passed on `2bfdc...`; release workflow #1 / `43172457693` passed all four GHCR image jobs | Owner confirmed manual S0.9 VPS acceptance on 13 Nov 2026; the acceptance record captures that attestation separately from exact-SHA CI evidence | [Slice](docs/slices/S0.9-vps-first-hardening.md), [Acceptance](docs/acceptance/S0.9-vps-first-hardening.md), [Runbook](docs/runbooks/S0.9-vps-blue-green-deployment.md). S0.9 slice is closed; the broader S0 exit gate remains separate. |
 | S0.10 | Backup integrity and isolated restore drill | `CLOSED` | Implementation accepted at `94536d65317aa513bdc715a39fbce2789dbb8709`; scripts first hardened at `2bfdc36106df4a65dad410e8c71e91cd580de21d` | Run #29 / `43189431464` passed on exact accepted SHA | Owner accepted actual backup, off-host workstation checksum, isolated restore, production post-checks, and Petshop isolation on 12 Nov 2026 | [Slice](docs/slices/S0.10-backup-restore-drill.md), [Acceptance](docs/acceptance/S0.10-backup-restore-drill.md), [Runbook](docs/runbooks/S0.10-backup-restore-drill.md). Do not repeat the S0.10 drill merely to reconfirm it. |
 | S0.11 | Scheduled backup operations, retention, off-site recovery, and Discord alerts | `RUNTIME VERIFIED — BACKUP / OFF-SITE / RETENTION / DISCORD TEST DELIVERY; OWNER ACCEPTANCE PENDING` | Historical runtime baseline `ad42e16bff5adc2b5c5a467d655066dd2586be50`; alert integration `c4fac60333aef4462e9145988fd7a02298500717`; idempotency fix `d8b77a5a636eae7206bb50512eae46e443f8098c`; current source `4166a78c4ae0f1b13691634f11d7081a43a3e9c7` | Run #35 / `43382145752` on `c4fac60`, Run #36 / `43385936863` on `d8b77a5`, and Run #37 / `43392329836` on `4166a78`; all three jobs passed in each run | Manual Discord embed delivery and synthetic `OnSuccess`/`OnFailure` hooks returned HTTP 200 and were visually confirmed on 13 Nov 2026; journal secret-safety scan passed; Blue and all FlowlessHub/Petshop containers remained running; timer disabled/inactive | [Slice](docs/slices/S0.11-scheduled-backup-operations.md), [Acceptance](docs/acceptance/S0.11-scheduled-backup-operations.md), [Runbook](docs/runbooks/S0.11-scheduled-backup-operations.md), [Discord runbook](docs/runbooks/S0.11-discord-alert-integration.md). A real post-integration production backup-success alert, explicit owner acceptance, timer activation, local deletion, remote prune policy, recurring restore cadence, and RPO/RTO remain open/separately gated. |
 
 ### Status reconciliation notes
 
-- This register intentionally preserves the source records' pending states for S0.1–S0.4, S0.6, S0.8, and S0.9 where current acceptance evidence is incomplete or internally inconsistent.
+- This register preserves the historical pending states for S0.1–S0.4 and S0.6. S0.8 and S0.9 were subsequently owner-accepted on 13 November 2026; see their acceptance records and Section 7.1 below.
 - S0.5 is an accepted test-only sub-slice; it does not close S0.
 - S0.7's acceptance scope is local Kubernetes smoke + CI only, not production Kubernetes deployment.
-- S0.8's runbook reports successful CI on the later edge foundation commit, while its acceptance record says acceptance is not claimed. This is a documentation reconciliation task, not permission to infer acceptance.
-- S0.9's latest acceptance document says runtime acceptance is pending. The presence of a live VPS deployment elsewhere does not automatically prove every S0.9 checklist item; close it only after mapping exact evidence to its acceptance items.
-- S0.10 alone is explicitly owner-accepted and closed in this synchronized register.
+- S0.8 and S0.9 are closed at their respective slice scopes based on the owner's explicit manual-acceptance confirmation; this does not claim that the entire S0 umbrella is complete.
+- S0.10 remains explicitly owner-accepted and closed; do not repeat its restore drill merely to reconfirm it.
 
 ## 4. S0.10 accepted evidence — immutable summary
 
@@ -69,7 +68,7 @@
 
 ## 5. Active checkpoint gate — S0.11
 
-S0.11 runtime acceptance is partially verified while the timer remains disabled: exact-SHA CI, manual one-shot service, R2 upload/read-back, full Restic repository data read, retention dry-run, resource guards, and FlowlessHub/Petshop isolation passed on 13 November 2026. External alert delivery and explicit owner acceptance remain open. Timer activation is a separate post-acceptance approval.
+S0.11 runtime acceptance is partially verified while the timer remains disabled: exact-SHA CI, manual one-shot service, R2 upload/read-back, full Restic repository data read, retention dry-run, resource guards, FlowlessHub/Petshop isolation, and Discord manual/synthetic test delivery passed on 13 November 2026. A real post-integration production backup-success alert and explicit S0.11 owner acceptance remain open. Timer activation is a separate approval.
 
 The current package defaults are fail-closed:
 
@@ -96,16 +95,23 @@ The current package defaults are fail-closed:
 
 ## 6. Follow-up queue
 
-1. Reconcile S0.8 and S0.9 acceptance documents against exact source/CI/runtime evidence without rewriting historical baselines.
-2. After a separately authorized post-integration production one-shot produces a real `flowlesshub-backup.service` success alert, record the receipt and obtain explicit owner acceptance of S0.11. Keep the timer disabled until separately authorized.
-3. Design and validate remote Restic retention/prune policy separately; the S0.11 local retention script does not prune remote snapshots.
-4. Record the first real production backup-success alert after a separately authorized one-shot; manual and synthetic Discord delivery are already verified. Timer activation still requires separate owner authorization.
-5. Define and rehearse recurring isolated restore cadence and service-level RPO/RTO after owner approval.
-6. Keep broader S0 exit requirements open until the full S0 definition of done is evidenced.
+1. After a separately authorized post-integration production one-shot produces a real `flowlesshub-backup.service` success alert, record the receipt and obtain explicit owner acceptance of S0.11. Keep the timer disabled until separately authorized.
+2. Design and validate remote Restic retention/prune policy separately; the S0.11 local retention script does not prune remote snapshots.
+3. Define and rehearse recurring isolated restore cadence and service-level RPO/RTO after owner approval.
+4. Keep broader S0 exit requirements open until the full S0 definition of done is evidenced.
 
 ## 7. Checkpoint closure protocol
 
 Before moving to the next checkpoint, update this register with exact implementation SHA, CI run, runtime evidence (if required), acceptance record link, owner status, and remaining follow-ups. Also update the canonical Windows/VPS operating runbook if command ownership or safety rules changed.
+
+## 7.1 S0.8 and S0.9 owner acceptance reconciliation (13 November 2026)
+
+- The repository owner explicitly confirmed in the project continuation conversation that manual acceptance for both S0.8 and S0.9 had been completed and accepted. This owner confirmation is recorded as the acceptance authority for these two slices.
+- S0.8 exact-source CI: Run #26 (`43147198165`) on `e8f33bb7c0e92d4c49724dadde55d2378cbfddce`; Frontend and Backend quality gates passed.
+- S0.9 exact-source CI: Run #27 (`43172335762`) on `20558818bca599782c822e9e3851e64cb979c369`; Frontend, Backend, and VPS deployment config gates passed. Executable-mode follow-up CI Run #28 (`43179520063`) on `2bfdc36106df4a65dad410e8c71e91cd580de21d` passed the same three jobs.
+- S0.9 release workflow #1 (`43172457693`) completed successfully on the `flowlesshub-v0.1.0` release ref; release verification and all four GHCR image publication jobs passed on the successful attempt.
+- The owner confirmed manual runtime acceptance. This reconciliation records the attestation and authoritative CI/release metadata; it does not fabricate command transcripts, probe payloads, timestamps, or runtime measurements that were not supplied in the repository record.
+- Closure applies only to S0.8 and S0.9. It does not close the broader S0 definition of done, change any other checkpoint status, or authorize changes to production infrastructure.
 
 ## 8. S0.11 Discord alert runtime evidence (13 November 2026)
 
