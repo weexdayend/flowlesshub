@@ -9,6 +9,11 @@ OFFSITE_SCRIPT="$ROOT/scripts/vps/offsite-backup.sh"
 RETENTION_SCRIPT="$ROOT/scripts/vps/backup-retention.sh"
 RETENTION_POLICY="$RUNTIME_DIR/backup-retention.env"
 
+if [[ "${FLOWLESSHUB_OFFSITE_REQUIRED:-}" != "1" ]]; then
+  echo "OFFSITE_REQUIRED: FLOWLESSHUB_OFFSITE_REQUIRED=1 is required; refusing scheduled backup." >&2
+  exit 1
+fi
+
 for command in awk mktemp stat; do
   command -v "$command" >/dev/null 2>&1 || {
     echo "Missing required command: $command" >&2
@@ -51,8 +56,11 @@ set +e
 OFFSITE_STATUS=$?
 set -e
 case "$OFFSITE_STATUS" in
-  0) printf 'Off-site stage: uploaded and snapshot listing confirmed.\n' ;;
-  3) printf 'Off-site stage: not configured or disabled; local backup retained.\n' ;;
+  0) printf 'Off-site stage: uploaded and snapshot read-back confirmed.\n' ;;
+  3)
+    echo "OFFSITE_REQUIRED: upload is disabled or not configured; scheduled backup cannot succeed." >&2
+    exit 1
+    ;;
   *)
     echo "Off-site upload failed; retention was not started." >&2
     exit "$OFFSITE_STATUS"

@@ -200,6 +200,9 @@ jobs:
       - name: Test backup Discord alert notifier
         run: python3 -m unittest scripts/vps/test_backup_alert.py -v
 
+      - name: Test scheduled backup mandatory off-site contract
+        run: python3 -m unittest scripts/vps/test_scheduled_backup.py -v
+
       - name: Validate FlowlessHub backup systemd units
         shell: bash
         run: |

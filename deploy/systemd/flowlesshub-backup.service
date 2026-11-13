@@ -17,6 +17,7 @@ Environment=HOME=/tmp/flowlesshub-home
 Environment=DOCKER_CONFIG=/tmp/flowlesshub-docker-config
 # ProtectHome=true hides /home/ubuntu; keep Restic's ephemeral cache in the unit's private /tmp.
 Environment=RESTIC_CACHE_DIR=/tmp/flowlesshub-restic-cache
+Environment=FLOWLESSHUB_OFFSITE_REQUIRED=1
 UMask=0077
 Nice=10
 IOSchedulingClass=best-effort

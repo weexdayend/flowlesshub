@@ -68,12 +68,12 @@
 
 ## 5. Active checkpoint gate — S0.11
 
-S0.11 runtime acceptance is partially verified while the timer remains disabled: exact-SHA CI, manual one-shot service, R2 upload/read-back, full Restic repository data read, retention dry-run, resource guards, FlowlessHub/Petshop isolation, and Discord manual/synthetic test delivery passed on 13 November 2026. A real post-integration production backup-success alert and explicit S0.11 owner acceptance remain open. Timer activation is a separate approval.
+S0.11 runtime acceptance is partially verified while the timer remains disabled: exact-SHA CI, manual one-shot service, R2 upload/read-back, full Restic repository data read, retention dry-run, resource guards, FlowlessHub/Petshop isolation, and Discord manual/synthetic test delivery passed on 13 November 2026. The production-readiness patch adds a mandatory-offsite guard to scheduled execution; exact-SHA CI and VPS deployment remain pending. A real post-integration production backup-success alert and explicit S0.11 owner acceptance remain open. The production target is an enabled daily timer after the one-shot evidence and explicit activation approval.
 
 The current package defaults are fail-closed:
 
 - systemd timer unit is installed but disabled and inactive; approved schedule is daily `20:00 UTC` with up to 15 minutes random delay;
-- Cloudflare R2 is the approved provider; bucket is `flowlesshub`, region `auto`; credentials have been rotated, the Restic password recovery copy is held outside the VPS, and the repository is initialized. Off-site flag is reset to `0` outside a controlled manual run;
+- Cloudflare R2 is the approved provider; bucket is `flowlesshub`, region `auto`; credentials have been rotated, the Restic password recovery copy is held outside the VPS, and the repository is initialized. The last recorded runtime flag was reset to `0`; set it to `1` in protected runtime config before the production one-shot and keep it enabled while the timer is enabled;
 - retention dry-run is configured for keep-last 2; local deletion remains disabled (`ALLOW_DELETE=0`) and auto-prune remains disabled (`AUTO_PRUNE=0`);
 - Discord Incoming Webhook selected by owner on 13 November 2026; protected VPS credential (`ubuntu:ubuntu`, mode `0600`), manual embed delivery, and synthetic success/failure hook deliveries are verified; a real post-integration production backup-success alert and owner acceptance remain pending; RPO/RTO are not agreed;
 - no restore is scheduled automatically;
@@ -95,7 +95,7 @@ The current package defaults are fail-closed:
 
 ## 6. Follow-up queue
 
-1. After a separately authorized post-integration production one-shot produces a real `flowlesshub-backup.service` success alert, record the receipt and obtain explicit owner acceptance of S0.11. Keep the timer disabled until separately authorized.
+1. Apply and validate mandatory-offsite scheduled execution on an exact-SHA green CI commit; set protected R2 config enabled, run one authorized post-integration production one-shot, and record its real Discord success alert. Then obtain explicit owner activation approval and enable the daily timer; keep local deletion and remote pruning disabled.
 2. Design and validate remote Restic retention/prune policy separately; the S0.11 local retention script does not prune remote snapshots.
 3. Define and rehearse recurring isolated restore cadence and service-level RPO/RTO after owner approval.
 4. Keep broader S0 exit requirements open until the full S0 definition of done is evidenced.
