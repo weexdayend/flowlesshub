@@ -11,6 +11,8 @@ Group=ubuntu
 SupplementaryGroups=docker
 WorkingDirectory=/opt/flowlesshub
 Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=HOME=/tmp/flowlesshub-home
+Environment=DOCKER_CONFIG=/tmp/flowlesshub-docker-config
 # ProtectHome=true hides /home/ubuntu; keep Restic's ephemeral cache in the unit's private /tmp.
 Environment=RESTIC_CACHE_DIR=/tmp/flowlesshub-restic-cache
 UMask=0077
@@ -18,6 +20,7 @@ Nice=10
 IOSchedulingClass=best-effort
 IOSchedulingPriority=7
 TimeoutStartSec=2h
+ExecStartPre=/usr/bin/install -d -m 0700 /tmp/flowlesshub-home/.config/git /tmp/flowlesshub-docker-config
 ExecStart=/opt/flowlesshub/scripts/vps/scheduled-backup.sh
 NoNewPrivileges=true
 PrivateTmp=true
