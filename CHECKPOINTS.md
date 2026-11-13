@@ -3,7 +3,7 @@
 **Repository:** `weexdayend/flowlesshub`
 **Default branch:** `main`
 **Last synchronized accepted repository baseline:** `94536d65317aa513bdc715a39fbce2789dbb8709`
-**Synchronization date:** 12 November 2026
+**Synchronization date:** 13 November 2026
 **Current active operational checkpoint:** S0.11 — Scheduled Backup Operations, Retention & Off-Site Recovery
 
 > This register describes FlowlessHub only. It supersedes the unrelated IT Services PSA/ServicePilot roadmap that previously occupied this file. Do not use external project blueprints as FlowlessHub source-of-truth documents.
@@ -43,7 +43,7 @@
 | S0.8 | Caddy edge and Blue/Green deployment foundation / edge validation repair | `IMPLEMENTED; ACCEPTANCE RECORD NEEDS RECONCILIATION` | Edge repair commit `e8f33bb7c0e92d4c49724dadde55d2378cbfddce`; repair history also documents earlier base `f949f896514cb871d1cbaeb2c01aac3195d6e546` | Run #26 on `e8f33...` passed per the S0.9 VPS runbook; the S0.8 repair acceptance file says it does not claim acceptance | Do not infer production acceptance from CI | [Slice](docs/slices/S0.8-caddy-edge-blue-green.md), [Acceptance](docs/acceptance/S0.8-edge-validation-repair.md), [Runbook](docs/runbooks/S0.8-caddy-edge-blue-green.md). Reconcile the acceptance record from evidence; preserve historical facts. |
 | S0.9 | VPS-first Compose Blue/Green delivery hardening | `IMPLEMENTED; RUNTIME ACCEPTANCE PENDING IN CURRENT RECORD` | Foundation `e8f33...`; hardening commit `20558818bca599782c822e9e3851e64cb979c369`; executable-mode fix `2bfdc36106df4a65dad410e8c71e91cd580de21d` | Baseline CI run #26 passed; later exact-SHA evidence must be read from GitHub | Current S0.9 acceptance document still marks VPS runtime acceptance pending; do not silently change it | [New slice](docs/slices/S0.9-vps-first-hardening.md), [Acceptance](docs/acceptance/S0.9-vps-first-hardening.md), [Runbook](docs/runbooks/S0.9-vps-blue-green-deployment.md). Owner/runtime evidence reconciliation remains a follow-up. |
 | S0.10 | Backup integrity and isolated restore drill | `CLOSED` | Implementation accepted at `94536d65317aa513bdc715a39fbce2789dbb8709`; scripts first hardened at `2bfdc36106df4a65dad410e8c71e91cd580de21d` | Run #29 / `43189431464` passed on exact accepted SHA | Owner accepted actual backup, off-host workstation checksum, isolated restore, production post-checks, and Petshop isolation on 12 Nov 2026 | [Slice](docs/slices/S0.10-backup-restore-drill.md), [Acceptance](docs/acceptance/S0.10-backup-restore-drill.md), [Runbook](docs/runbooks/S0.10-backup-restore-drill.md). Do not repeat the S0.10 drill merely to reconfirm it. |
-| S0.11 | Scheduled backup operations, retention, and off-site recovery | `IMPLEMENTED / BASE CI VERIFIED; POLICY ALIGNMENT PENDING` | Initial package against `94536d65317aa513bdc715a39fbce2789dbb8709`; latest CI-verified SHA `b19acdebe584fa0a432dae4c89c29229df8f7b1e` | Run #31 / `43250984796` passed: backend, VPS deployment config, frontend | No VPS runtime acceptance yet; timer not installed/enabled, R2 repository not initialized, external alert not configured | [Slice](docs/slices/S0.11-scheduled-backup-operations.md), [Acceptance](docs/acceptance/S0.11-scheduled-backup-operations.md), [Runbook](docs/runbooks/S0.11-scheduled-backup-operations.md). Owner policy: daily 20:00 UTC, R2 bucket `flowlesshub`, local keep 2; deletion remains disabled; external alert destination pending. |
+| S0.11 | Scheduled backup operations, retention, and off-site recovery | `RUNTIME VERIFIED — BACKUP / OFF-SITE / RETENTION; ALERT & OWNER ACCEPTANCE PENDING` | Initial package against `94536d65317aa513bdc715a39fbce2789dbb8709`; current source `ad42e16bff5adc2b5c5a467d655066dd2586be50` | Run #32 / `43274241744` passed on `0bb29c1`; Run #33 / `43334005808` passed on `ad42e16`; all three CI jobs in each run passed | Manual systemd backup succeeded; local checksum, R2 archive-triplet read-back, Restic check + full data read (2/2 packs), retention dry-run, resource guards and Petshop isolation verified on 13 Nov 2026; timer disabled/inactive | [Slice](docs/slices/S0.11-scheduled-backup-operations.md), [Acceptance](docs/acceptance/S0.11-scheduled-backup-operations.md), [Runbook](docs/runbooks/S0.11-scheduled-backup-operations.md). External alert destination/test and explicit owner acceptance remain pending; timer activation, local deletion and remote prune are not authorized. |
 
 ### Status reconciliation notes
 
@@ -69,12 +69,12 @@
 
 ## 5. Active checkpoint gate — S0.11
 
-S0.11 runtime acceptance may be performed with the timer disabled: owner-approved policy, exact-SHA CI, a manual one-shot service run, R2 upload/read-back, retention dry-run, external alert delivery, resource guards, and FlowlessHub/Petshop isolation must all be evidenced. Timer activation is a separate post-acceptance approval.
+S0.11 runtime acceptance is partially verified while the timer remains disabled: exact-SHA CI, manual one-shot service, R2 upload/read-back, full Restic repository data read, retention dry-run, resource guards, and FlowlessHub/Petshop isolation passed on 13 November 2026. External alert delivery and explicit owner acceptance remain open. Timer activation is a separate post-acceptance approval.
 
 The current package defaults are fail-closed:
 
-- systemd timer file is not installed or enabled; approved schedule is daily `20:00 UTC` with up to 15 minutes random delay;
-- Cloudflare R2 is the approved provider; bucket is `flowlesshub`, region `auto`; off-site remains disabled until old credentials are revoked, new bucket-scoped credentials and Restic password recovery are provisioned, and the repository is explicitly initialized;
+- systemd timer unit is installed but disabled and inactive; approved schedule is daily `20:00 UTC` with up to 15 minutes random delay;
+- Cloudflare R2 is the approved provider; bucket is `flowlesshub`, region `auto`; credentials have been rotated, the Restic password recovery copy is held outside the VPS, and the repository is initialized. Off-site flag is reset to `0` outside a controlled manual run;
 - retention dry-run is configured for keep-last 2; local deletion remains disabled (`ALLOW_DELETE=0`) and auto-prune remains disabled (`AUTO_PRUNE=0`);
 - external alerting is required and approved, but destination/channel, configuration, and delivery test remain pending; RPO/RTO are not agreed;
 - no restore is scheduled automatically;
@@ -84,9 +84,9 @@ The current package defaults are fail-closed:
 
 | Decision | Current state | Required before |
 |---|---|---|
-| Backup cadence and time | Approved: daily 20:00 UTC (`03:00–03:15 WIB` next day) | Runtime verification; timer activation separately gated |
-| Off-site provider / S3 endpoint / bucket / region | Approved: Cloudflare R2; account endpoint recorded in runbook; bucket `flowlesshub`; region `auto` | Verify jurisdiction, provision credentials and initialize repository once |
-| Off-site credentials and Restic encryption password | Previously disclosed values must be revoked; fresh credentials/password not provisioned | Upload enablement |
+| Backup cadence and time | Approved: daily 20:00 UTC (`03:00–03:15 WIB` next day) | Timer remains disabled; activation separately gated |
+| Off-site provider / S3 endpoint / bucket / region | Approved and configured: Cloudflare R2; bucket `flowlesshub`; region `auto`; default jurisdiction used; R2 repository initialized | Keep endpoint and target scope unchanged unless a separate decision is made |
+| Off-site credentials and Restic encryption password | Old disclosed credential revoked; new bucket-scoped Object Read & Write credentials provisioned; Restic password stored under protected runtime path and recovery copy confirmed outside VPS | Preserve secrets; rotate immediately if exposed |
 | Local retention count | Approved: keep two newest; dry-run only | Runtime dry-run validation |
 | Local deletion permission | Not approved; disabled | Any future `--apply` requires separate approval |
 | Remote Restic retention/prune policy | Not designed | Remote snapshot pruning |
@@ -97,7 +97,7 @@ The current package defaults are fail-closed:
 ## 6. Follow-up queue
 
 1. Reconcile S0.8 and S0.9 acceptance documents against exact source/CI/runtime evidence without rewriting historical baselines.
-2. Complete S0.11 R2 credential rotation, password escrow, repository initialization, and manual runtime acceptance while the timer remains disabled.
+2. After item 4 passes, obtain explicit owner acceptance of S0.11. Keep timer disabled until separately authorized.
 3. Design and validate remote Restic retention/prune policy separately; the S0.11 local retention script does not prune remote snapshots.
 4. Select and validate the approved external alert destination; do not activate the timer until a test notification is received.
 5. Define and rehearse recurring isolated restore cadence and service-level RPO/RTO after owner approval.
