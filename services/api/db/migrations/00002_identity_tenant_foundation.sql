@@ -92,10 +92,17 @@ CREATE INDEX auth_events_user_occurred_at_idx ON identity.auth_events (user_id, 
 -- +goose Down
 SET LOCAL lock_timeout = '5s';
 SET LOCAL statement_timeout = '30s';
+-- squawk-ignore ban-drop-table -- intentional teardown of the S1.1 foundation during rollback
 DROP TABLE identity.auth_events;
+-- squawk-ignore ban-drop-table -- intentional teardown of the S1.1 foundation during rollback
 DROP TABLE identity.sessions;
+-- squawk-ignore ban-drop-table -- intentional teardown of the S1.1 foundation during rollback
 DROP TABLE tenant.memberships;
+-- squawk-ignore ban-drop-table -- intentional teardown of the S1.1 foundation during rollback
 DROP TABLE tenant.organizations;
+-- squawk-ignore ban-drop-table -- intentional teardown of the S1.1 foundation during rollback
 DROP TABLE identity.users;
+-- squawk-ignore ban-drop-schema -- intentional teardown of the S1.1 tenant schema during rollback
 DROP SCHEMA tenant;
+-- squawk-ignore ban-drop-schema -- intentional teardown of the S1.1 identity schema during rollback
 DROP SCHEMA identity;
