@@ -1,6 +1,6 @@
 # FlowlessHub — S1 Product MVP Roadmap
 
-**Product lane baseline:** `3def4d8747c12a7a334a448a46509559a2d812fb` (13 November 2026).
+**Product lane baseline:** `495383f38ec7c356b97bb66017b66a3380130eaf` (14 November 2026).
 **Strategy:** ship a narrow, usable IT-services operating workflow before expanding into the full service lifecycle.
 
 ## MVP product outcome
@@ -11,14 +11,14 @@ A pilot IT-services organization can securely enter FlowlessHub, maintain its cu
 
 | Milestone | Capability | User-visible outcome | Depends on |
 |---|---|---|---|
-| S1.1 | Identity & tenant foundation | First owner can be provisioned; user can sign in/out; API exposes only authorized organization membership | Current S0 platform foundation |
-| S1.2 | Tenant authorization, member invitations & customer/contact master data | Team can invite members and create, view, update, and archive customers/contacts within the selected organization | S1.1; RLS/non-owner DB role proof |
+| S1.1 | Backend identity & tenant foundation (API) | First owner can be provisioned; API supports login/logout/session introspection and returns only authorized organization membership; web sign-in UX is explicitly out of scope | Current S0 platform foundation |
+| S1.2 | Web sign-in/session UX, tenant authorization, member invitations & customer/contact master data | A user can sign in/out through the web app and access protected routes; the team can invite members and create, view, update, and archive customers/contacts only within the selected organization | S1.1; tenant transaction context, non-owner DB role, FORCE RLS and PgBouncer isolation proof |
 | S1.3 | Lead & opportunity management | Team can register a lead, assign an owner, manage pipeline status, and convert/qualify an opportunity | S1.2 |
 | S1.4 | Survey & RAB | Team can capture survey findings, scope, line items, quantities, units, cost assumptions, and internal margin controls | S1.3 |
 | S1.5 | Quotation & document output | Team can issue a versioned quotation, preview/download a PDF, revise it without destroying history, and track draft/sent/accepted/rejected/expired states | S1.4 |
 | S1.6 | MVP integration & pilot hardening | End-to-end acceptance, auditability, tenant-isolation tests, onboarding runbook, observability, backup/recovery checks, and pilot release | S1.1–S1.5 plus operational gates |
 
-Each milestone is one vertical slice: domain rules → migration/queries → OpenAPI contract → backend behavior → frontend workflow → tests → docs/acceptance. Avoid building empty module shells for future stages.
+Each milestone is one vertical slice: domain rules → migration/queries → OpenAPI contract → backend behavior → frontend workflow where required → tests → docs/acceptance. S1.1 is the intentional backend/API foundation exception; its web sign-in/session UX is the first prerequisite in S1.2, before member or customer workflows. Avoid building empty module shells for future stages.
 
 ## Explicitly deferred until after the first commercial MVP
 

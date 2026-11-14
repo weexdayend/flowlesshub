@@ -23,13 +23,14 @@ FlowlessHub is a monorepo application with a Go modular-monolith backend, a Next
 ## Current operational baseline
 
 - Repository: `weexdayend/flowlesshub`, default branch `main`.
-- Last synchronized accepted repository baseline: `94536d65317aa513bdc715a39fbce2789dbb8709` (12 November 2026).
+- Last synchronized repository baseline: `495383f38ec7c356b97bb66017b66a3380130eaf` (14 November 2026; release `flowlesshub-v0.1.1`).
 - VPS source/runtime directory: `/opt/flowlesshub` on Ubuntu 24.04.
 - Production Compose project: `flowlesshub-vps`.
 - Production Blue/Green implementation: FlowlessHub-owned Docker networks, volumes, Caddy edge, and host Nginx virtual host.
 - S0.10 backup-integrity and isolated-restore drill: `CLOSED` with owner-accepted evidence in [`docs/acceptance/S0.10-backup-restore-drill.md`](docs/acceptance/S0.10-backup-restore-drill.md).
-- S0.11 scheduled backup / retention / off-site operations: operational follow-up remains open; daily timer is enabled, and its first scheduled execution is awaiting runtime evidence. This does not block S1 product development.
-- S1.1 Identity & Tenant Foundation: slice specification prepared at the current product-delivery lane; implementation has not started. See [`docs/slices/S1.1-identity-tenant-foundation.md`](docs/slices/S1.1-identity-tenant-foundation.md).
+- S0.11 scheduled backup / retention / off-site operations: first natural scheduled run, off-site read-back and Discord success are verified; local retention apply is verified. External restore, measured RPO/RTO and explicit owner acceptance remain open. This does not block S1 product development.
+- S1.1 Identity & Tenant Foundation: backend/API implementation, exact-SHA CI, release publication and production API acceptance are verified. S1.1 is owner-accepted as a backend/API foundation. Browser sign-in/session UX and protected web routes are explicitly deferred to S1.2. See [`docs/acceptance/S1.1-identity-tenant-foundation.md`](docs/acceptance/S1.1-identity-tenant-foundation.md).
+- Next product slice: S1.2 starts with minimal web sign-in/session UX and protected routes, then tenant authorization, member onboarding, and customer/contact foundation. See [`docs/roadmap/S1-MVP-ROADMAP.md`](docs/roadmap/S1-MVP-ROADMAP.md).
 
 The above baseline is a recorded synchronization point, not a claim that `origin/main` will remain unchanged. Always fetch and verify the live SHA before applying a patch.
 
