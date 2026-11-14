@@ -3,3 +3,55 @@
 //   sqlc v1.31.1
 
 package dbgen
+
+import (
+	"github.com/jackc/pgx/v5/pgtype"
+)
+
+type IdentityAuthEvent struct {
+	ID             pgtype.UUID        `json:"id"`
+	UserID         pgtype.UUID        `json:"user_id"`
+	OrganizationID pgtype.UUID        `json:"organization_id"`
+	EventType      string             `json:"event_type"`
+	OccurredAt     pgtype.Timestamptz `json:"occurred_at"`
+}
+
+type IdentitySession struct {
+	ID          pgtype.UUID        `json:"id"`
+	UserID      pgtype.UUID        `json:"user_id"`
+	TokenDigest []byte             `json:"token_digest"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	ExpiresAt   pgtype.Timestamptz `json:"expires_at"`
+	LastUsedAt  pgtype.Timestamptz `json:"last_used_at"`
+	RevokedAt   pgtype.Timestamptz `json:"revoked_at"`
+}
+
+type IdentityUser struct {
+	ID              pgtype.UUID        `json:"id"`
+	EmailNormalized string             `json:"email_normalized"`
+	DisplayName     string             `json:"display_name"`
+	PasswordHash    string             `json:"password_hash"`
+	Status          string             `json:"status"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+type TenantMembership struct {
+	ID             pgtype.UUID        `json:"id"`
+	OrganizationID pgtype.UUID        `json:"organization_id"`
+	UserID         pgtype.UUID        `json:"user_id"`
+	Role           string             `json:"role"`
+	Status         string             `json:"status"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
+type TenantOrganization struct {
+	ID             pgtype.UUID        `json:"id"`
+	SlugNormalized string             `json:"slug_normalized"`
+	DisplayName    string             `json:"display_name"`
+	LegalName      pgtype.Text        `json:"legal_name"`
+	Status         string             `json:"status"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}

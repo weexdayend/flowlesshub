@@ -24,7 +24,8 @@ function fail(message) {
 function readRepoFile(relativePath) {
   const absolutePath = path.join(ROOT, relativePath);
   if (!existsSync(absolutePath)) fail(`required file is missing: ${relativePath}`);
-  return readFileSync(absolutePath, "utf8");
+  // Keep manifest contract checks portable across Windows CRLF and Linux LF checkouts.
+  return readFileSync(absolutePath, "utf8").replace(/\r\n/g, "\n");
 }
 
 function requireMatch(source, expression, description) {

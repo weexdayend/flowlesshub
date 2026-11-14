@@ -4,7 +4,8 @@
 **Default branch:** `main`
 **Last synchronized accepted repository baseline:** `94536d65317aa513bdc715a39fbce2789dbb8709`
 **Synchronization date:** 13 November 2026
-**Current active operational checkpoint:** S0.11 — Scheduled Backup Operations, Retention & Off-Site Recovery
+**Current active product checkpoint:** S1.1 — Identity & Tenant Foundation (specification prepared; implementation not started)
+**Open operational follow-up:** S0.11 — Scheduled Backup Operations, Retention & Off-Site Recovery (not a product-development blocker)
 
 > This register describes FlowlessHub only. It supersedes the unrelated IT Services PSA/ServicePilot roadmap that previously occupied this file. Do not use external project blueprints as FlowlessHub source-of-truth documents.
 
@@ -43,7 +44,8 @@
 | S0.8 | Caddy edge and Blue/Green deployment foundation / edge validation repair | `CLOSED — OWNER ACCEPTED (13 Nov 2026)` | Edge repair commit `e8f33bb7c0e92d4c49724dadde55d2378cbfddce`; earlier repair base `f949f896514cb871d1cbaeb2c01aac3195d6e546` | CI Run #26 / `43147198165` passed on exact `e8f33...` (Frontend and Backend quality gates) | Owner confirmed manual S0.8 acceptance on 13 Nov 2026; the acceptance record documents the owner attestation without inventing unarchived terminal output | [Slice](docs/slices/S0.8-caddy-edge-blue-green.md), [Acceptance](docs/acceptance/S0.8-edge-validation-repair.md), [Runbook](docs/runbooks/S0.8-caddy-edge-blue-green.md). S0.8 slice is closed; the broader S0 exit gate remains separate. |
 | S0.9 | VPS-first Compose Blue/Green delivery hardening | `CLOSED — OWNER ACCEPTED (13 Nov 2026)` | Foundation `e8f33...`; hardening commit `20558818bca599782c822e9e3851e64cb979c369`; executable-mode fix `2bfdc36106df4a65dad410e8c71e91cd580de21d` | CI Run #27 / `43172335762` passed on `205588...`; CI Run #28 / `43179520063` passed on `2bfdc...`; release workflow #1 / `43172457693` passed all four GHCR image jobs | Owner confirmed manual S0.9 VPS acceptance on 13 Nov 2026; the acceptance record captures that attestation separately from exact-SHA CI evidence | [Slice](docs/slices/S0.9-vps-first-hardening.md), [Acceptance](docs/acceptance/S0.9-vps-first-hardening.md), [Runbook](docs/runbooks/S0.9-vps-blue-green-deployment.md). S0.9 slice is closed; the broader S0 exit gate remains separate. |
 | S0.10 | Backup integrity and isolated restore drill | `CLOSED` | Implementation accepted at `94536d65317aa513bdc715a39fbce2789dbb8709`; scripts first hardened at `2bfdc36106df4a65dad410e8c71e91cd580de21d` | Run #29 / `43189431464` passed on exact accepted SHA | Owner accepted actual backup, off-host workstation checksum, isolated restore, production post-checks, and Petshop isolation on 12 Nov 2026 | [Slice](docs/slices/S0.10-backup-restore-drill.md), [Acceptance](docs/acceptance/S0.10-backup-restore-drill.md), [Runbook](docs/runbooks/S0.10-backup-restore-drill.md). Do not repeat the S0.10 drill merely to reconfirm it. |
-| S0.11 | Scheduled backup operations, retention, off-site recovery, and Discord alerts | `RUNTIME VERIFIED — MANDATORY-OFFSITE PRODUCTION ONE-SHOT / R2 READ-BACK / REAL DISCORD SUCCESS; OWNER ACCEPTANCE PENDING` | Production-readiness commit `151c8931cb9b00974c90406001590763d6050cf3`; prior alert integration `4166a78c4ae0f1b13691634f11d7081a43a3e9c7`; historical runtime baseline `ad42e16bff5adc2b5c5a467d655066dd2586be50` | Run #40 / `43407844129` passed Frontend quality gates, Backend quality gates, and VPS deployment config gates on exact SHA `151c8931cb9b00974c90406001590763d6050cf3` | One production one-shot succeeded on 13 Nov 2026; exact R2 snapshot and independent archive-triplet byte read-back matched; real Discord `OnSuccess` delivery returned HTTP 200; timer disabled/inactive, local deletion and remote prune disabled | [Slice](docs/slices/S0.11-scheduled-backup-operations.md), [Acceptance](docs/acceptance/S0.11-scheduled-backup-operations.md), [Runbook](docs/runbooks/S0.11-scheduled-backup-operations.md), [Discord runbook](docs/runbooks/S0.11-discord-alert-integration.md). Explicit S0.11 owner acceptance remains pending. Timer activation is separately gated; local deletion, remote prune policy, recurring restore cadence, and RPO/RTO remain open. |
+| S0.11 | Scheduled backup operations, retention, off-site recovery, and Discord alerts | `RUNTIME VERIFIED — PRODUCTION ONE-SHOT / R2 READ-BACK / DISCORD SUCCESS; TIMER ARMED (FIRST SCHEDULED RUN PENDING); LOCAL RETENTION APPLY VERIFIED; REMOTE RETENTION DRY-RUN PASSED; EXTERNAL RESTORE BLOCKED; OWNER ACCEPTANCE PENDING` | Production-readiness commit `151c8931cb9b00974c90406001590763d6050cf3`; latest docs sync `3def4d8747c12a7a334a448a46509559a2d812fb` | Run #40 / `43407844129` passed all three required jobs on exact implementation SHA `151c8931cb9b00974c90406001590763d6050cf3` | One-shot 13 Nov 22:03 WIB passed with R2 triplet read-back and Discord HTTP 200; timer enabled/active with next trigger 14 Nov 03:07:13 WIB but no trigger observed yet; local retention apply verified; remote policy dry-run kept all 3 snapshots with no removal candidate; Blue active and six FlowlessHub containers Up | [Current runtime addendum](docs/acceptance/S0.11-current-runtime-status-2026-11-13.md), [Slice](docs/slices/S0.11-scheduled-backup-operations.md), [Acceptance](docs/acceptance/S0.11-scheduled-backup-operations.md), [Runbook](docs/runbooks/S0.11-scheduled-backup-operations.md). Owner acceptance, first scheduled run, external disposable restore environment, and measured RPO/RTO remain open. |
+| S1.1 | Identity & tenant foundation | `PREPARED — SPECIFICATION ONLY; IMPLEMENTATION NOT STARTED` | Specification baseline `3def4d8747c12a7a334a448a46509559a2d812fb` | Not run — documentation-only specification patch | No runtime or production migration authorized | [Roadmap](docs/roadmap/S1-MVP-ROADMAP.md), [Slice](docs/slices/S1.1-identity-tenant-foundation.md), [Runbook](docs/runbooks/S1.1-identity-tenant-foundation.md), [Acceptance](docs/acceptance/S1.1-identity-tenant-foundation.md). Product development proceeds independently; S0.11 operational evidence remains open. |
 
 ### Status reconciliation notes
 
@@ -66,39 +68,31 @@
 - Post-drill production checks showed Blue active, FlowlessHub services healthy, API `/readyz` OK, Web HTTP 200, and all five Petshop containers still running. No Petshop resource or Nginx configuration was changed.
 - S0.10 did not implement schedule, retention policy, geographic off-site storage, recurring restore schedule, or formal RPO/RTO objectives. Those are separate follow-ups and are not included in S0.10 acceptance.
 
-## 5. Active checkpoint gate — S0.11
+## 5. S0.11 operational follow-up — not a product-development blocker
 
-S0.11 mandatory-offsite production execution is runtime verified on 13 November 2026: exact-SHA CI Run #40 passed all three jobs on `151c8931cb9b00974c90406001590763d6050cf3`; the VPS deployed the matching backup service unit; one real production one-shot succeeded with R2 archive-triplet read-back and a real Discord `OnSuccess` HTTP 200 delivery. The timer remains disabled/inactive. Explicit S0.11 owner acceptance remains pending; timer activation is a separate owner decision.
+S0.11 remains open for explicit owner acceptance, but it no longer blocks local product development. The current runtime state is recorded in [the 13 November operational addendum](docs/acceptance/S0.11-current-runtime-status-2026-11-13.md), which supersedes pre-activation statements in the historical S0.11 slice, runbook, and acceptance narrative. Do not close S0.11 until its remaining operational gates are evidenced.
 
-The current package defaults are fail-closed:
+Current state at 13 November 2026 22:32 WIB:
 
-- systemd timer unit is installed but disabled and inactive; approved schedule is daily `20:00 UTC` with up to 15 minutes random delay;
-- Cloudflare R2 is the approved provider; bucket is `flowlesshub`, region `auto`; credentials have been rotated, the Restic password recovery copy is held outside the VPS, and the repository is initialized. The controlled production one-shot temporarily set `FLOWLESSHUB_OFFSITE_ENABLED=1` and restored it to `0` after completion. Any future timer activation must separately authorize and preserve the flag at `1` while scheduled execution is enabled;
-- retention dry-run is configured for keep-last 2; local deletion remains disabled (`ALLOW_DELETE=0`) and auto-prune remains disabled (`AUTO_PRUNE=0`);
-- Discord Incoming Webhook selected by owner on 13 November 2026; protected VPS credential (`ubuntu:ubuntu`, mode `0600`), manual embed delivery, synthetic success/failure hooks, and the real production one-shot success delivery (HTTP 200; message ID `1570753254546087997`) are verified; explicit owner acceptance remains pending; RPO/RTO are not agreed;
-- no restore is scheduled automatically;
-- no production or Petshop service is restarted or modified by the proposed backup workflow.
+- The daily `20:00 UTC` systemd timer is enabled and active. The next trigger is 14 November 2026 03:07:13 WIB; `LastTriggerUSec` is empty because the first natural scheduled invocation is still pending. The successful one-shot at 22:03 WIB preceded timer activation at 22:05:58 WIB and is not timer-trigger evidence.
+- Mandatory Cloudflare R2 off-site upload is enabled. The latest one-shot created `flowlesshub-20261113T150329Z.dump`, SHA-256 `affddd4aa43b23c4a319064e1adae42d60cad5557dd196fed268f24f5bb0e2d3`, Restic snapshot `a8f6a98b60569be8e472425092490a5fe1e675971d739da0abb63d90c3e2bf91`; remote archive-triplet read-back matched and Discord success delivery returned HTTP 200.
+- Owner-authorized local retention apply completed after final remote byte read-back. Only the eligible `20261113T001334Z` local artifact group was deleted. The 13 November 10:52 UTC and 15:03 UTC artifacts remain; the unmarked 12 November artifact remains protected.
+- Approved remote policy is `--group-by host --tag flowlesshub --keep-last 2 --keep-daily 14 --keep-weekly 8 --keep-monthly 12`. The latest inventory had three matching snapshots; dry-run kept all three and found no removal candidate. No `forget`/`prune` was run after that dry-run.
+- `FLOWLESSHUB_BACKUP_RETENTION_AUTO_PRUNE=1` controls local `backup-retention.sh --apply`; despite the name, it does not run remote Restic pruning.
+- Monthly restore cadence and 24-hour RPO / 24-hour RTO targets are approved. The reminder is active, but there is no external disposable recovery environment; no external restore drill has been completed and RPO/RTO are not measured.
+- Blue was active and all six FlowlessHub containers were `Up` at the latest observation. No production deployment, color switch, or Petshop/Frictiona mutation was part of this work.
 
-### Owner decisions required before activation
+### Historical owner decisions before activation
 
-| Decision | Current state | Required before |
-|---|---|---|
-| Backup cadence and time | Approved: daily 20:00 UTC (`03:00–03:15 WIB` next day) | Timer remains disabled; activation separately gated |
-| Off-site provider / S3 endpoint / bucket / region | Approved and configured: Cloudflare R2; bucket `flowlesshub`; region `auto`; default jurisdiction used; R2 repository initialized | Keep endpoint and target scope unchanged unless a separate decision is made |
-| Off-site credentials and Restic encryption password | Old disclosed credential revoked; new bucket-scoped Object Read & Write credentials provisioned; Restic password stored under protected runtime path and recovery copy confirmed outside VPS | Preserve secrets; rotate immediately if exposed |
-| Local retention count | Approved: keep two newest; dry-run only | Runtime dry-run validation |
-| Local deletion permission | Not approved; disabled | Any future `--apply` requires separate approval |
-| Remote Restic retention/prune policy | Not designed | Remote snapshot pruning |
-| Alert destination | Discord Incoming Webhook provisioned as a protected systemd credential; manual embed and synthetic success/failure deliveries confirmed | A real production backup-success notification remains pending; timer activation requires separate approval |
-| Recurring restore-drill cadence | Not selected; never auto-run by this timer | Restore schedule |
-| RPO / RTO | Not agreed | Any formal recovery objective claim |
+The earlier decision table is retained as a historical record. Use the current runtime addendum linked above for the activated timer, local retention, remote policy, alerting, restore, and RPO/RTO state.
 
 ## 6. Follow-up queue
 
-1. Record the completed production one-shot evidence and obtain explicit owner acceptance of S0.11. Keep the timer disabled until its activation is separately authorized; preserve local deletion and remote prune as disabled.
-2. Design and validate remote Restic retention/prune policy separately; the S0.11 local retention script does not prune remote snapshots.
-3. Define and rehearse recurring isolated restore cadence and service-level RPO/RTO after owner approval.
-4. Keep broader S0 exit requirements open until the full S0 definition of done is evidenced.
+1. Verify the first natural timer-triggered backup after the 14 November 2026 03:07–03:22 WIB window, including trigger timestamp, service result, journal, archive triplet, R2 byte read-back, and Discord notification. Do not manually start the service as a substitute.
+2. Provision an external disposable recovery environment and complete the monthly restore drill there, isolated from production and Petshop.
+3. Re-run remote retention dry-run as snapshots age. Do not invoke remote `forget`/`prune` while there are no eligible removal candidates.
+4. Measure actual recovery-point age and restore/service recovery duration independently against the approved 24-hour RPO/RTO targets.
+5. Obtain explicit owner acceptance of S0.11 after the remaining evidence is recorded; keep the broader S0 umbrella exit gate separate.
 
 ## 7. Checkpoint closure protocol
 

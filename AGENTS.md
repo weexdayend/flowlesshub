@@ -55,6 +55,18 @@ Use this sequence for every checkpoint:
 
 **Audit → Slice Specification → Owner Decisions → Patch → Local Review → Commit/Push → Exact-SHA CI → VPS Runtime Validation (only when required) → Acceptance Evidence → Checkpoint Documentation Update → Next Checkpoint.**
 
+### Environment-specific gate execution (mandatory)
+
+The sequence above is an ordering rule, not a requirement to emulate every environment on the Windows workstation.
+
+- **Windows is the development/repository workstation.** Use it for source and documentation changes, review, native local checks, Git staging/commit/push, and CI inspection. Windows PowerShell, Git Bash, WSL, and Docker Desktop remain workstation tooling; none is the production VPS.
+- **GitHub Actions is the authoritative runner for repository CI.** Any gate defined in `.github/workflows/ci.yml` must be judged from that workflow on the exact pushed candidate SHA. This includes Linux-dependent checks and VPS deployment-configuration checks such as Bash syntax, ShellCheck, `systemd-analyze verify`, VPS Compose config, Caddy/Nginx config, and Kubernetes/edge validation.
+- Do not make the Windows workflow block on installing or repairing WSL/Git Bash just to reproduce CI's Linux gates. A local Linux container may be used to diagnose a failure, but label it `local diagnostic`; it does not replace or satisfy GitHub Actions evidence.
+- **VPS runtime acceptance comes after exact-SHA CI passes.** Only then use the VPS runbook for runtime checks or explicitly approved deployment/migration/operational changes, and only when required by the checkpoint.
+- A CI job named `vps-deployment` validates repository configuration in CI; it does not deploy to or accept the production VPS.
+- On CI failure, diagnose on Windows, make a reviewed fix, create and push a new commit, then inspect CI for the new exact SHA. A green run on an earlier SHA never validates later changes.
+- Never report local container checks, GitHub CI checks, or static configuration validation as VPS runtime acceptance. Keep repository, CI, runtime, and owner-acceptance evidence separate.
+
 - Work on one active checkpoint at a time.
 - Preserve historical implementation baselines and accepted evidence.
 - Separate proposed scope from implemented code, CI evidence, VPS evidence, and owner acceptance.

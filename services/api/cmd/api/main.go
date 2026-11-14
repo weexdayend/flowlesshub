@@ -13,6 +13,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
+	"github.com/weexdayend/flowlesshub/services/api/internal/identity"
 	"github.com/weexdayend/flowlesshub/services/api/internal/kernel/config"
 	"github.com/weexdayend/flowlesshub/services/api/internal/kernel/health"
 	"github.com/weexdayend/flowlesshub/services/api/internal/platform/database"
@@ -27,9 +28,22 @@ func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	slog.SetDefault(logger)
 
+	if len(os.Args) > 1 && os.Args[1] == "bootstrap-owner" {
+		if err := runBootstrapOwner(os.Args[2:]); err != nil {
+			logger.Error("owner bootstrap failed", "error", err)
+			os.Exit(1)
+		}
+		return
+	}
+
 	cfg, err := config.Load()
 	if err != nil {
 		logger.Error("load configuration", "error", err)
+		os.Exit(1)
+	}
+	apiConfig, err := config.LoadAPI()
+	if err != nil {
+		logger.Error("load API security configuration", "error", err)
 		os.Exit(1)
 	}
 
@@ -43,13 +57,20 @@ func main() {
 	defer pool.Close()
 
 	readiness := health.NewReadinessGate(pool)
+	passwordHasher := identity.NewDefaultPasswordHasher()
+	authService, err := identity.NewService(identity.NewPostgresStore(pool), passwordHasher, logger)
+	if err != nil {
+		logger.Error("initialize identity service", "error", err)
+		os.Exit(1)
+	}
 
 	router := chi.NewRouter()
 	router.Use(middleware.RequestID)
-	router.Use(middleware.RealIP)
+	router.Use(middleware.ClientIPFromHeader("X-Real-IP"))
 	router.Use(middleware.Recoverer)
 	router.Get("/livez", health.Liveness)
 	router.Get("/readyz", readiness.ServeHTTP)
+	router.Mount("/", identity.NewHTTPHandler(authService, apiConfig.WebOrigin, apiConfig.SessionCookieSecure))
 
 	server := &http.Server{
 		Addr:              cfg.HTTPAddr,

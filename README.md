@@ -12,6 +12,7 @@ FlowlessHub is a monorepo application with a Go modular-monolith backend, a Next
 | [`CHECKPOINTS.md`](CHECKPOINTS.md) | Current checkpoint register, state, evidence, and follow-ups |
 | [`docs/runbooks/FLOWLESSHUB-WINDOWS-VPS-OPERATING-RUNBOOK.md`](docs/runbooks/FLOWLESSHUB-WINDOWS-VPS-OPERATING-RUNBOOK.md) | Permanent Windows ↔ VPS operating standard and continuity protocol |
 | [`docs/slices/`](docs/slices/) | Checkpoint scope, architecture decisions, implementation baselines |
+| [`docs/roadmap/S1-MVP-ROADMAP.md`](docs/roadmap/S1-MVP-ROADMAP.md) | Product MVP scope and ordered delivery milestones |
 | [`docs/runbooks/`](docs/runbooks/) | Step-by-step local, CI, VPS, deployment, backup, and recovery procedures |
 | [`docs/acceptance/`](docs/acceptance/) | Evidence-backed validation and owner acceptance records |
 | [`api/openapi.yaml`](api/openapi.yaml) | OpenAPI source contract |
@@ -27,7 +28,8 @@ FlowlessHub is a monorepo application with a Go modular-monolith backend, a Next
 - Production Compose project: `flowlesshub-vps`.
 - Production Blue/Green implementation: FlowlessHub-owned Docker networks, volumes, Caddy edge, and host Nginx virtual host.
 - S0.10 backup-integrity and isolated-restore drill: `CLOSED` with owner-accepted evidence in [`docs/acceptance/S0.10-backup-restore-drill.md`](docs/acceptance/S0.10-backup-restore-drill.md).
-- S0.11 scheduled backup / retention / off-site operations: implementation package prepared; timer and deletion remain disabled until owner decisions and validation are complete.
+- S0.11 scheduled backup / retention / off-site operations: operational follow-up remains open; daily timer is enabled, and its first scheduled execution is awaiting runtime evidence. This does not block S1 product development.
+- S1.1 Identity & Tenant Foundation: slice specification prepared at the current product-delivery lane; implementation has not started. See [`docs/slices/S1.1-identity-tenant-foundation.md`](docs/slices/S1.1-identity-tenant-foundation.md).
 
 The above baseline is a recorded synchronization point, not a claim that `origin/main` will remain unchanged. Always fetch and verify the live SHA before applying a patch.
 

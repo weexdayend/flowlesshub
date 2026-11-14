@@ -4,8 +4,8 @@ info:
   version: 0.1.0
   summary: OpenAPI-first contract for the FlowlessHub modular monolith.
   description: >-
-    Foundation contract. Business endpoints are added only with their approved
-    vertical slices. Cost and margin data must never be exposed to client or vendor APIs.
+    Foundation and first-party identity contract. Cost and margin data must never
+    be exposed to client or vendor APIs.
 servers:
   - url: http://localhost:5050
     description: Local development
@@ -40,7 +40,146 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthResponse"
+  /v1/auth/login:
+    post:
+      operationId: login
+      summary: Authenticate a first-party user and issue an opaque session cookie
+      tags: [Identity]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "204":
+          description: Authentication succeeded. Session token is set only in an HttpOnly cookie.
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+              description: Host-only HttpOnly session cookie; Secure in production; SameSite=Lax.
+        "400":
+          description: Invalid request body.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Generic invalid-credentials response; does not reveal whether an account exists.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Origin is not allowed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "415":
+          description: Request body must use application/json.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Login attempts are rate limited.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Authentication service or persistence is unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /v1/auth/logout:
+    post:
+      operationId: logout
+      summary: Revoke the current session and clear its cookie
+      tags: [Identity]
+      security: []
+      responses:
+        "204":
+          description: Session was revoked if present; operation is idempotent. The session cookie is expired even when no session is present.
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+              description: Expired host-only session cookie.
+        "403":
+          description: Origin is not allowed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Session revocation or persistence is unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /v1/auth/me:
+    get:
+      operationId: getCurrentUser
+      summary: Return the authenticated user and active organization memberships
+      tags: [Identity]
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Authenticated user, session expiry, and active organization memberships.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeResponse"
+        "401":
+          description: Session is missing, expired, revoked, or belongs to a disabled user.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Session or organization data could not be loaded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /v1/organizations:
+    get:
+      operationId: listOrganizations
+      summary: List organizations with an active membership for the authenticated user
+      tags: [Identity]
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Active organizations for the current user only.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationListResponse"
+        "401":
+          description: Session is missing, expired, revoked, or belongs to a disabled user.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Session or organization data could not be loaded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: __Host-flowlesshub_session
   schemas:
     HealthResponse:
       type: object
@@ -50,3 +189,81 @@ components:
         status:
           type: string
           enum: [ok, unavailable]
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        password:
+          type: string
+          description: UTF-8 password value; the API enforces a 12–128 byte limit. JSON Schema character lengths are intentionally not used for this byte-based policy.
+          writeOnly: true
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: string
+    UserProfile:
+      type: object
+      additionalProperties: false
+      required: [id, email, displayName]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        displayName:
+          type: string
+    OrganizationMembership:
+      type: object
+      additionalProperties: false
+      required: [id, slug, displayName, role]
+      properties:
+        id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        displayName:
+          type: string
+        role:
+          type: string
+          enum: [owner, admin, member]
+    SessionSummary:
+      type: object
+      additionalProperties: false
+      required: [expiresAt]
+      properties:
+        expiresAt:
+          type: string
+          format: date-time
+    MeResponse:
+      type: object
+      additionalProperties: false
+      required: [user, session, organizations]
+      properties:
+        user:
+          $ref: "#/components/schemas/UserProfile"
+        session:
+          $ref: "#/components/schemas/SessionSummary"
+        organizations:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrganizationMembership"
+    OrganizationListResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrganizationMembership"

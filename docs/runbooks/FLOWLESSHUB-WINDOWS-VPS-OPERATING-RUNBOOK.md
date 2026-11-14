@@ -5,8 +5,8 @@
 **Repository:** `weexdayend/flowlesshub`
 **Windows checkout:** `C:\Projects\saas\flowlesshub`
 **VPS:** Ubuntu 24.04, `/opt/flowlesshub`
-**Last synchronized:** 12 November 2026
-**Current accepted repository baseline at synchronization:** `94536d65317aa513bdc715a39fbce2789dbb8709`
+**Last synchronized:** 14 November 2026
+**Current accepted repository baseline at synchronization:** `3def4d8747c12a7a334a448a46509559a2d812fb`
 
 > This is a permanent operating rule, not a one-checkpoint note. Every future continuation must read this document before giving commands or changing the repository/runtime. Update this file when an operating rule changes; do not create competing versions of the Windows/VPS rules.
 
@@ -77,6 +77,13 @@ Do on Windows:
 
 Do not use the VPS as a development workstation. Do not edit repository files ad hoc on production to bypass the Windows patch/review workflow.
 
+### Linux-specific deployment CI gates belong to GitHub Actions
+
+- The repository CI workflow is the authoritative place for Linux-dependent checks and deployment-configuration gates: Bash syntax, ShellCheck, `systemd-analyze verify`, VPS Docker Compose configuration, Caddy/Nginx configuration, and Kubernetes/edge validation.
+- Run and judge those gates in GitHub Actions on the exact pushed candidate SHA. Do not turn Windows setup into a prerequisite by repairing WSL or installing a separate Bash runtime just to imitate the CI runner.
+- A disposable Linux container on Windows may be used for troubleshooting, but its result is local diagnostic evidence only. It does not replace GitHub Actions and must not be described as CI acceptance or VPS acceptance.
+- The CI `vps-deployment` job validates repository files and configuration. It does not deploy to, inspect, or accept the production VPS.
+
 ### VPS is the production runtime
 
 Do on VPS only when the checkpoint requires it:
@@ -136,6 +143,16 @@ Every checkpoint follows this sequence, with environment and evidence explicit a
 **Audit → Slice Specification → Patch → Local Review → Commit/Push → Exact-SHA CI → VPS Runtime Validation (only when required) → Acceptance Evidence → Checkpoint Documentation Update → Next Checkpoint.**
 
 A documentation-only checkpoint does not require a VPS login. A shell-script-only operational checkpoint does not require an application image rebuild unless the changed files actually affect an image. Do not add unnecessary production actions to a repo-only task.
+
+### 4.1 Mandatory gate handoff: Windows → GitHub Actions → VPS
+
+1. **Windows pre-push:** finish source review, inspect the complete working-tree diff, and run the applicable native local tests and quality gates. Keep the change set scoped to the active checkpoint.
+2. **Commit and push:** stage only reviewed paths, preserve required Git file modes, commit, push, and record the resulting 40-character SHA. Do not start production deployment while CI is pending or failing.
+3. **GitHub Actions:** inspect the workflow run for that exact SHA. All applicable required jobs must pass, including the `vps-deployment` configuration job. A run for a parent or earlier SHA is not sufficient.
+4. **VPS runtime:** only after exact-SHA CI is green, follow the checkpoint's VPS runbook when runtime validation or deployment is required. Use the separate SSH boundary and explicit owner authorization for production mutations. A documentation-only or configuration-only checkpoint does not automatically require VPS access.
+5. **Failure loop:** if CI fails, diagnose and fix the source on Windows, review the diff, create and push a new commit, then inspect CI for the new SHA. Never bypass a failing gate by substituting a local container run.
+
+Do not describe Windows-hosted Docker validation, GitHub Actions configuration validation, or static file checks as production runtime acceptance. Record repository, CI, VPS runtime, and owner-acceptance evidence as separate categories.
 
 ### Required evidence categories
 
