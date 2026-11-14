@@ -1,7 +1,7 @@
 # FlowlessHub — Domain and Module Architecture
 
-**Status:** Prepared for owner review; target architecture grounded in the approved PSA lifecycle and audited repository.
-**Strategic baseline:** `c6e31e03204de8035af9ef0bf2e0f0f187f8f297`
+**Status:** Owner-approved target architecture; implementation details remain slice/ADR-gated.
+**Strategic baseline:** `92aec75c6387d6f57a1dc0d71c5ab7431f5831cd`
 **Architectural style:** Go modular monolith, PostgreSQL source of truth, contract-first HTTP API, Next.js web application.
 
 ## 1. Architectural intent
@@ -41,7 +41,7 @@ The following boundaries are the proposed ownership map. Each module owns its sc
 
 | Module | Owns | Must not own / must not bypass |
 |---|---|---|
-| **Identity** | Global user identity, credentials, sessions, authentication events, recovery/security lifecycle | Organization role decisions and business-record visibility. |
+| **Identity** | Global human identities, passwordless/WebAuthn credentials, authenticator assurance, server-side sessions, internal OIDC issuer and first-party client registry, account recovery, security events and authentication audit | Organization role decisions, tenant membership and business-record visibility. |
 | **Tenant Access** | Organizations, memberships, invitations, organization settings, role/permission assignments, tenant context establishment | Global credential verification or business facts. |
 | **CRM** | Customers, contacts, prospects/leads, opportunities, ownership and pipeline history | RAB calculations, contract execution or project delivery state. |
 | **Survey & Solution** | Survey cases, technical findings, requirements, constraints, proposed solution/scope and evidence references | Approved selling price or issued quotation snapshots. |
@@ -159,7 +159,7 @@ This is a merge blocker for the first customer/contact or other tenant-owned bus
 - Mutations that can be retried must define idempotency behavior. Concurrent resource updates define `ETag`/row-version or an explicit conflict response.
 - HTTP errors are consistent, machine-readable and avoid leaking internal data. Pagination, sorting, filtering and export limits are explicit.
 - The current API cookie is host-only to the API host. The Next.js web host therefore cannot read it during server rendering or middleware execution. S1.2 must resolve the browser-session topology before implementation.
-- **Proposed default for S1.2, not yet an owner-approved ADR:** a same-origin Next.js backend-for-frontend (BFF) can provide server-side route protection while keeping the opaque API session in an HttpOnly host-only cookie and proxying authenticated calls server-to-server. The ADR must compare this with direct API-origin requests, document cookie issuance/forwarding, CSRF/Origin protection, logout/revocation, SSR and Blue/Green behavior, and must never expose a session token to browser JavaScript. Do not implement until the ADR is reviewed.
+- **Owner-approved S1.2 target:** the Next.js application uses a same-origin backend-for-frontend (BFF) for server-side route protection and API calls. The BFF owns an opaque host-only application-session cookie and a server-side session/token binding; the internal Identity authority owns the revocable identity/SSO session. Keep the two cookies host-only and distinct. OIDC authorization-code exchange occurs server-to-server. No raw token is exposed to browser JavaScript, local/session storage, URL, HTML, or logs. The exact BFF session store, CSRF contract, cookie rotation, revocation propagation, and Blue/Green overlap are fixed in ADR-0001 implementation detail before code.
 - Frontend authorization is presentation and navigation only. The API rechecks session, organization membership, resource permission and tenant context on every protected operation.
 
 ## 9. Integration boundaries
@@ -169,18 +169,20 @@ Use adapter interfaces owned by the relevant domain. Provider selection and busi
 | Integration concern | Owning module / boundary | Required controls |
 |---|---|---|
 | Document binary storage and rendering | Document Management | Private tenant-scoped object keys, authorization before download, version/hash metadata, malware/content checks where applicable, retention and signed-download expiry. |
-| Email / WhatsApp / notifications | Integration & Notifications | Verified recipient intent, templates, rate limits, deduplication, retry and delivery status; never make domain commits depend on synchronous delivery. |
+| Email / WhatsApp / notifications | Integration & Notifications | Existing owner SMTP adapter for transactional email; verified recipient intent, templates, rate limits, durable outbox, deduplication, retry, bounce/failure state and delivery status; never make domain commits depend on synchronous delivery. Email is not an authentication factor. |
 | E-signature | Contract & Acceptance adapters | Provider evidence, document hash/version binding, callback signature verification, revocation/correction semantics and legally valid provider selection by owner. |
 | Payment gateway | Finance adapter | Verified webhook signatures, idempotent event ingestion, reconciliation, refunds/reversals and no client-supplied payment status. |
 | Accounting / tax systems | Finance adapter | Versioned mappings, tax/accounting policy approval, export idempotency, reconciliation reports and exception queues. |
 | External REST APIs / webhooks | API platform | Scoped credentials, key rotation, signed webhook delivery, replay protection, rate limits and audit. |
-| SSO / identity federation | Identity | Explicit identity lifecycle, domain verification, account-linking and recovery policy; no provider assumed. |
+| First-party OIDC SSO | Identity | Internal issuer; Authorization Code + PKCE `S256`; exact redirect URI registration; transaction-bound `state`/`nonce`; issuer/audience/signature/time validation; short-lived single-use codes; scoped clients and server-side BFF token handling. |
+| External enterprise identity federation | Identity | Customer-owned OIDC/SAML provider onboarding, verified domains, account linking, JIT/SCIM lifecycle and recovery policy are separate future decisions; no external provider is assumed now. |
+| SMTP transactional email | Integration & Notifications, invoked by Identity and owning domains | Existing owner SMTP through a server-side adapter; TLS, sender-domain verification, SPF/DKIM/DMARC alignment, durable outbox, idempotent retries, rate limits, bounce/failure handling and redacted observability. Email OTP/magic links are not authentication factors. |
 
 ## 10. Decisions required before affected slices
 
 Create a scoped ADR or product policy for each of the following before its first implementation:
 
-- Browser session/BFF topology and CSRF contract (S1.2).
+- BFF server-side session binding/storage, CSRF/Origin contract, cookie rotation, OIDC login handoff and Blue/Green session compatibility (S1.2-A).
 - Role/permission model, customer/vendor actor identities, tenant context and PostgreSQL roles/policies (S1.3).
 - Customer hierarchy, duplicate handling, contact consent and external portal identity (CRM/master-data slices).
 - Survey templates, RAB unit/tax/margin semantics, approval thresholds and quotation validity/version policy.
@@ -193,3 +195,52 @@ Create a scoped ADR or product policy for each of the following before its first
 - Data classification, retention, deletion/export, regional hosting, service availability objectives and support model.
 
 Do not block current architectural documentation on making these decisions. Keep them visible and resolve each at the point where it changes the data model, contract or legal/financial behavior.
+
+## 11. Identity platform contract — owner-approved 14 November 2026
+
+### 11.1 Authority and trust boundaries
+
+- Keep the existing Go Identity module and S1.1 global `identity.users` as the internal identity authority. The authority authenticates humans and issues/revokes sessions; it does not decide organization or project permissions.
+- Use OpenID Connect as the first-party SSO protocol. Do not invent a custom SSO token format or make a third-party identity provider a runtime dependency for first-party sign-in.
+- Existing production origins are `https://app.flowlesshub.com` and `https://api.flowlesshub.com`. The intended issuer origin is the existing API origin; the WebAuthn ceremony is presented only by the approved first-party login surface. Exact issuer metadata, WebAuthn RP ID/origin allowlist, callback URLs and local-development origins must be explicit configuration and frozen in S1.2-A before the first credential is registered. No wildcard origins, parent-domain cookies or inferred subdomain trust.
+- First-party applications (initial web app; later customer/vendor applications) register as separate OIDC clients with exact redirect URIs, audiences, scopes, session policies and revocation behavior. Future portals redirect to the central first-party login surface; they do not gain additional WebAuthn origins by default.
+
+### 11.2 Passwordless and authenticator assurance
+
+- WebAuthn/FIDO2 passkeys are the preferred primary passwordless authenticator. Require `userVerification=required` for registration and assertion; do not silently downgrade to `preferred` or `discouraged`.
+- The server validates one-time random challenges, expiry and purpose binding, `clientDataJSON` type/challenge/origin, RP ID hash, user-presence/user-verification flags, signature, credential ownership and authenticator data. Challenges are bound to the intended user/session and consumed atomically. Origin allowlists are exact; RP ID is a dedicated, reviewed value.
+- Support more than one credential per user, including platform passkeys and external FIDO2 security keys. Store public credential material and required metadata only. Do not store private authenticator keys. Attestation collection is minimized; enterprise/device attestation is not enabled by default without an explicit privacy/security decision.
+- Record the evidence needed to classify a ceremony as single-factor cryptographic or multi-factor cryptographic. A successful passkey assertion is phishing-resistant when the WebAuthn verifier-name binding is validated, but do not claim every synced or user-verification-capable credential satisfies the same MFA assurance. If an authorization policy requires MFA, it must demand a credential/event that meets the configured multi-factor assurance requirement.
+- Recovery codes are random, single-use lookup secrets; store only a verifier/hash, show them once, rotate/revoke them after use, and audit generation/use. A second enrolled passkey/security key is the preferred recovery route. An email notification is not proof of identity. Manual recovery requires a documented, independently verified process and separation of duties.
+- S1.1 password hashes and session semantics remain a migration bridge. Enrollment requires an already authenticated S1.1 account; keep the change additive, support rollback, and do not remove password compatibility until enrollment, support recovery, and a separately approved retirement policy are proven.
+
+### 11.3 OIDC and BFF
+
+- Use Authorization Code Flow with PKCE `S256` for all browser first-party clients, including confidential BFF clients. Require transaction-specific state and nonce, exact redirect URI equality, issuer identification/mix-up defense, ID-token issuer/audience/signature/nonce/expiry validation, short-lived single-use authorization codes and audience-/scope-restricted tokens.
+- Do not implement Implicit Flow, Resource Owner Password Credentials grant, wildcard callback matching, open redirects, or bearer tokens in browser storage. Client secrets and access/refresh tokens remain server-side. Apply key rotation and publish the appropriate OIDC discovery/JWKS metadata.
+- The BFF uses an opaque, host-only, HttpOnly application cookie (`Secure`, `Path=/`, no `Domain`, appropriate `SameSite`) and a server-side record bound to the user, Identity session, OIDC client, expiry and revocation state. The existing S1.1 identity cookie/session remains separately host-only to the API origin. Do not share one broad-domain cookie across app, client and vendor origins.
+- Logout/revocation invalidates the central Identity session and all bound BFF application sessions. Reauthentication/step-up events are explicit and auditable; API authorization is rechecked on every protected request.
+
+### 11.4 SMTP delivery
+
+- Use the SMTP service/domain already owned by the product owner; do not invent hostnames, sender addresses, credentials, ports or TLS modes. Record them as deployment configuration after a redacted connectivity/deliverability preflight.
+- Use email for address confirmation, later organization/user invitations, security notifications, and recovery notifications. No email OTP/magic-link login, MFA or step-up; no use of mailbox access as an out-of-band authenticator.
+- Persist outbound notification intent with the domain/security event through a durable outbox. River workers deliver asynchronously with idempotency, bounded retries/backoff, deduplication, bounce/failure status and manual-repair visibility. SMTP outage must not roll back an already committed login, security or business-domain event.
+- SMTP credentials and signing secrets belong only in the protected runtime secret store. Verify SMTP TLS, sender-domain SPF/DKIM/DMARC alignment, abuse/rate controls and redaction before enabling production send. Never place secret values in Git, CLI arguments, chat, process lists or logs.
+
+### 11.5 Relationship and authorization separation
+
+- One global human identity may later participate in multiple relationships, but identity linking does not grant access. Workforce organization membership, customer-contact access and vendor-user access are distinct relationship types.
+- Customer and vendor identities receive only explicitly delegated project/package/document permissions through the authorization model; they are not automatically added as members of the service-provider tenant. One person acting for a customer and a vendor must select and prove the corresponding context, and data/approval trails remain separated.
+- S1.2 establishes authentication and first-party SSO only. S1.3 owns organization membership, role/permission matrix, assurance requirements by privileged role, customer/vendor delegated authorization, tenant context, runtime DB role, RLS and PgBouncer isolation.
+
+### 11.6 Required implementation order
+
+1. Review ADR-0001, threat model, exact origins/RP ID, client registry, BFF/session topology and recovery policy.
+2. Validate SMTP delivery configuration and domain authentication without exposing credentials; implement the adapter/outbox and isolated delivery tests.
+3. Add WebAuthn registration/authentication and credential lifecycle with additive migrations and full negative/security tests.
+4. Add OIDC issuer/client support and Next.js BFF integration; keep tokens server-side and verify session/revocation behavior across Blue/Green overlap.
+5. Add recovery codes, account-security notifications, session/device inventory and controlled migration from S1.1 password sessions.
+6. Verify authenticator assurance semantics and expose policy hooks for S1.3; do not bypass role policy or tenant isolation.
+
+No customer/vendor portal, external enterprise IdP federation, SCIM, or tenant-owned business table is implemented by S1.2. These use the established contracts in later slices.

@@ -1,7 +1,7 @@
 # FlowlessHub — Production-Grade PSA Delivery Roadmap
 
-**Status:** Prepared for owner review; replaces the MVP-first roadmap.
-**Roadmap baseline:** `c6e31e03204de8035af9ef0bf2e0f0f187f8f297`
+**Status:** Owner-approved delivery direction; full PSA and identity platform delivered through production-grade slices.
+**Roadmap baseline:** `92aec75c6387d6f57a1dc0d71c5ab7431f5831cd`
 **Delivery model:** Incremental production-grade vertical slices; dependency order, not calendar estimates.
 **Canonical product strategy:** [`PRODUCT-STRATEGY.md`](../product/PRODUCT-STRATEGY.md)
 **Canonical architecture:** [`DOMAIN-MODULE-ARCHITECTURE.md`](../architecture/DOMAIN-MODULE-ARCHITECTURE.md)
@@ -46,7 +46,7 @@ Presales may obtain non-binding vendor budgetary quotations to inform the intern
 S1.1 accepted identity API
         |
         v
-S1.2 Authenticated web entry / session UX
+S1.2 Passwordless identity / first-party SSO / authenticated web entry
         |
         v
 S1.3 Tenant authorization + DB isolation + membership lifecycle
@@ -113,16 +113,20 @@ A slice may mark an item not applicable only with a written reason. Essential se
 
 ## 5. Production-grade delivery slices
 
-### S1.2 — Authenticated Web Entry and Session UX
+### S1.2 — Passwordless Identity, First-Party SSO and Authenticated Web Entry
 
-**Business outcome:** An existing S1.1 user can sign in, restore an authenticated session, sign out and reach protected application routes. Anonymous users cannot view authenticated workspace content.
+**Business outcome:** Existing S1.1 users can enroll phishing-resistant passkeys, authenticate passwordlessly with a verified user-presence/verification ceremony, use one first-party identity across FlowlessHub applications through OIDC SSO, recover access safely, and use the protected Next.js application through a server-side BFF. S1.1 remains closed and compatible.
 
-- **Domain/data:** Reuse the existing S1.1 user/session model unless the reviewed ADR identifies a necessary additive change. Do not add business tables in this slice.
-- **API/UI:** Implement sign-in, sign-out, session introspection, expired-session handling, protected route/layout, authenticated navigation and safe organization selection context. Do not present mock overview metrics as live data.
-- **Security/correctness:** No session token in JavaScript, localStorage, sessionStorage, URLs or logs. Test cookie flags, CSRF/Origin controls, login throttling across active instances, revocation, disabled-user handling and direct protected-route access.
-- **Architecture prerequisite:** Resolve the API-host-only cookie versus Next.js server-rendering boundary through an ADR before code. The proposed BFF direction is documented in the domain architecture; compare it with direct API-origin calls and prove SSR, cookie forwarding, CSRF, logout and Blue/Green compatibility.
-- **Operational acceptance:** No production migration is expected unless the ADR proves a schema change is required. Exact-SHA frontend/backend CI and end-to-end session tests are required; no VPS deployment is authorized by this roadmap entry alone.
-- **Depends on:** S1.1 accepted API baseline.
+- **Authority and compatibility:** Keep the internally managed Go Identity authority and global S1.1 users. Preserve accepted password hashes and opaque sessions as a staged migration bridge. Use additive schema/API changes only; no destructive identity migration or forced mass logout.
+- **Passwordless/MFA:** WebAuthn/FIDO2 passkeys are the primary passwordless authenticator. Require `userVerification=required`, exact origin/RP ID validation, one-time expiring challenges, cryptographic signature validation, credential ownership checks, and auditable credential lifecycle. Support multiple passkeys and roaming FIDO2 security keys. Record authenticator/user-verification evidence; do not assume every passkey has equivalent multi-factor assurance or claim a NIST AAL without assessment. S1.3 enforces assurance by role.
+- **First-party SSO:** Provide an internal OIDC issuer for first-party clients. Use Authorization Code Flow + PKCE `S256`, exact redirect URI allowlists, transaction-specific `state`/`nonce`, issuer/audience/signature/time validation, short-lived single-use codes, scoped clients and key rotation. Do not use Implicit or Resource Owner Password Credentials grants. External enterprise IdP federation and SCIM remain separate decisions.
+- **Browser/session boundary:** Use a same-origin Next.js BFF. Keep the Identity authority's API-host-only session distinct from the app-host-only BFF session. The BFF stores session/token bindings server-side; no access, refresh or opaque session token is exposed to browser JavaScript, local/session storage, URLs, HTML or logs. Logout and revocation invalidate all bound sessions.
+- **SMTP foundation:** Integrate the owner's existing SMTP through a server-side adapter for email confirmation, security notifications, recovery notifications and later invitations. Use a durable outbox, asynchronous idempotent delivery, bounded retry/backoff, delivery/bounce state and manual repair. Verify TLS and SPF/DKIM/DMARC alignment. Email OTP and magic-link authentication are prohibited as login/MFA/step-up factors.
+- **Recovery and transition:** Enroll passkeys from an already authenticated S1.1 session. Provide one-time hashed recovery codes, a second authenticator route and controlled support recovery; email only notifies. Password fallback remains during migration and is retired only through a separately approved measured rollout.
+- **Identity boundary:** A global human identity does not imply tenant membership. Customer contacts and vendor users receive separate delegated relationships and project/package scopes in later slices; they are not automatically members of the provider tenant. S1.2 does not implement customer/vendor portal workflows.
+- **Implementation sequence:** S1.2-A accepted-ADR implementation contract/threat model; freeze issuer+RP origins, OIDC client registry and browser-proven BFF handoff; S1.2-B SMTP adapter/outbox and deliverability preflight; S1.2-C WebAuthn credentials/challenges; S1.2-D OIDC issuer/client registry and BFF integration; S1.2-E recovery/assurance/security inventory; S1.2-F migration, Blue/Green compatibility and browser security acceptance.
+- **Operational acceptance:** No production deployment or identity migration is authorized by the roadmap entry alone. Exact-SHA frontend/backend CI, browser/WebAuthn interoperability, cross-instance abuse control, credential/session revocation, SMTP failure/retry, OIDC negative tests and rollback evidence are required.
+- **Depends on:** S1.1 accepted identity/API baseline. S1.3 consumes the authentication assurance signals and owns tenant authorization/role enforcement.
 
 ### S1.3 — Tenant Authorization, Membership Lifecycle and Database Isolation
 

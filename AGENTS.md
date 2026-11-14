@@ -124,3 +124,7 @@ Do not report `DONE`, `VERIFIED`, `ACCEPTED`, or `CLOSED` when only a patch was 
 ## Continuity requirement
 
 The repository is the durable project memory. At the end of each checkpoint, update `CHECKPOINTS.md`, the relevant slice/runbook/acceptance documents, and the canonical Windows/VPS runbook when an operating rule changes. A fresh session must be able to continue from these files without depending on chat history.
+
+## Identity platform implementation guardrail
+
+Before modifying authentication, browser sessions, OIDC clients, WebAuthn/passkeys, MFA assurance, recovery, SMTP delivery or customer/vendor identity access, read [`ADR-0001 — Passwordless Identity and First-Party OIDC`](docs/architecture/ADR-0001-passwordless-identity-and-first-party-oidc.md), the active S1.2 slice, and the exact repository implementation. ADR-0001 is the accepted target contract; unresolved implementation details remain explicit S1.2-A gates. Never infer that passkey enrollment, SMTP delivery, OIDC SSO or MFA is implemented from documentation alone. Keep SMTP credentials out of source control/chat/logs, never use email OTP as an authenticator, never expose tokens to browser-readable storage, and never weaken exact WebAuthn origin/RP ID or OIDC redirect/client validation for convenience.

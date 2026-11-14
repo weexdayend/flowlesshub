@@ -1,9 +1,9 @@
 # FlowlessHub — Product Strategy
 
-**Status:** Prepared for owner review; reflects the approved non-MVP product direction.
+**Status:** Owner-approved product direction and first-party identity baseline; implementation remains incremental and slice-gated.
 **Strategy date:** 14 November 2026
 **Repository:** `weexdayend/flowlesshub`
-**Strategic baseline:** `c6e31e03204de8035af9ef0bf2e0f0f187f8f297`
+**Strategic baseline:** `92aec75c6387d6f57a1dc0d71c5ab7431f5831cd`
 
 ## 1. Product mandate
 
@@ -114,12 +114,12 @@ These are not silently decided by this strategy:
 
 - SaaS packaging, subscription tiers, self-service signup, tenant provisioning automation and billing for FlowlessHub itself.
 - Multiple legal entities, subsidiaries, organization-unit hierarchy, cross-tenant collaboration, shared customer masters and data residency.
-- Exact customer/vendor portal model, delegated access model, external identity federation, passkeys/MFA and account recovery requirements. Customer and vendor access must remain separate even if one natural person happens to participate in both relationships.
+- External enterprise identity federation (customer-owned OIDC/SAML IdPs), cross-tenant identity linking, and the final role-to-authenticator-assurance matrix. First-party passwordless authentication, internal OIDC SSO, transactional SMTP email, and recovery baseline are decided by ADR-0001. Customer and vendor access must remain separate even if one natural person participates in both relationships.
 - Industry-specific survey templates, service catalog taxonomy, project templates, customer/vendor approval matrices and document numbering.
 - Contract/SPK templates, legally effective execution and certified electronic-signature provider.
 - Indonesian tax/e-invoicing requirements, tax calculation/rounding, invoice numbering, withholding, and any regulatory reporting obligations.
 - Accounting policy, revenue recognition, cost capitalization, work-in-progress and exchange-rate policy. Project P&L must not be represented as statutory accounting without an approved accounting model.
-- Payment gateway/provider, accounting integration, email/WhatsApp provider, object-storage provider, document-rendering engine and external API/webhook policy.
+- Payment gateway/provider, accounting integration, WhatsApp provider, object-storage provider, document-rendering engine and external API/webhook policy. Transactional email uses the owner's existing SMTP baseline; exact connection/sender configuration remains a deployment input in ADR-0001.
 - Whether procurement/vendor management is a complete module or a project-cost-control capability.
 - Whether FlowlessHub includes full HRMS or only delivery resource, assignment, availability and time-capture capabilities.
 - Language/localization policy, retention schedules, archival/deletion policy and data-export/erasure policy.
@@ -130,3 +130,22 @@ Record each decision in a versioned ADR or product policy with owner, rationale,
 ## 7. Product acceptance principle
 
 A release is acceptable only when the slice completes the promised user outcome using persisted data and proves its domain invariants, authorization, tenant isolation, concurrency behavior, failure recovery, audit evidence, observability and production-operating procedure. A visually complete screen, a green build, a successful deployment, or a pilot demonstration alone is not product acceptance.
+
+## 8. Identity and authentication baseline — owner-approved 14 November 2026
+
+FlowlessHub will provide an internally managed Identity authority for workforce users and future first-party application clients. Authentication and authorization remain separate: Identity proves the human account and issues an authenticated session; Tenant Access and the owning business modules decide which organization, customer, vendor, project, package, document, and action that identity may access.
+
+The approved target is:
+
+- **Passwordless primary authentication:** WebAuthn/FIDO2 passkeys. Require WebAuthn user verification (`userVerification=required`) for registration and authentication. Support multiple authenticators, including platform passkeys and roaming FIDO2 security keys. Validate challenge freshness and one-time use, ceremony type, RP ID, exact allowed origin, credential ownership, signatures, and authenticator evidence on the server.
+- **MFA assurance:** Do not label every passkey or every successful WebAuthn assertion as equivalent MFA. Record whether local user verification/activation was performed and the authenticator properties needed to classify the event. A policy that requires MFA must reject an assertion that can only be classified as single-factor. Role-to-assurance requirements are enforced with the S1.3 authorization model; no NIST AAL or regulatory certification is claimed without a separate conformance assessment.
+- **First-party SSO:** The internal Identity authority exposes OpenID Connect. First-party web applications use Authorization Code Flow with PKCE `S256`, exact registered redirect URIs, transaction-specific `state` and `nonce`, issuer/audience validation, short-lived single-use authorization codes, and narrowly scoped clients. The Next.js application uses a same-origin BFF; bearer/access/refresh tokens remain server-side.
+- **Session boundary:** Preserve S1.1 global identities and revocable opaque server-side sessions. Keep the Identity authority session and each BFF application's host-only browser session distinct. Cookies use `__Host-` semantics (`Secure`, `HttpOnly`, `Path=/`, no `Domain`) in production. Never put tokens in browser-readable storage, URLs, HTML, client-side state, or logs. Revocation must propagate to application sessions.
+- **SMTP and transactional email:** Use the owner's existing domain SMTP through a replaceable server-side adapter for email-address confirmation, security notifications, account recovery notifications, and later invitations. Delivery uses a durable outbox, idempotent retries, bounded timeouts, and observable failure/manual-repair states. SMTP credentials stay in protected runtime secrets, not source control or command output. Verify TLS and sender-domain SPF/DKIM/DMARC alignment before production delivery.
+- **Email is not an authenticator:** No email OTP, email magic link, or mailbox possession as primary login, step-up MFA, or recovery proof. Email confirmation codes may establish address control; email may notify a user of a recovery/security event. Recovery uses separately protected one-time recovery codes and/or another enrolled authenticator plus a controlled recovery process.
+- **Existing-account transition:** S1.1 password hashes and opaque sessions remain compatible during staged enrollment. Existing provisioned users authenticate through the accepted S1.1 path to enroll a passkey; the migration is additive and must not invalidate accepted production sessions. Password fallback is transitional only and is retired through an explicit measured rollout after enrollment coverage and recovery readiness are proven.
+- **External actor separation:** A global human identity may later act as an organization member, customer contact, or vendor user through distinct relationships. Customer/vendor access is delegated and project-scoped; it does not create unrestricted membership in the service-provider tenant. One person participating in multiple business relationships does not merge their permissions or documents.
+
+This is the first-party baseline. Customer-owned enterprise federation (OIDC/SAML), SCIM provisioning, cross-tenant account linking, and final external-role assurance matrices remain separate owner decisions and are not silently included in S1.2.
+
+The normative design references are [W3C WebAuthn Level 3](https://www.w3.org/TR/webauthn-3/), [NIST SP 800-63B-4](https://pages.nist.gov/800-63-4/sp800-63b.html), and [IETF RFC 9700 — OAuth 2.0 Security Best Current Practice](https://www.rfc-editor.org/rfc/rfc9700.html). The detailed decision record is [`ADR-0001`](../architecture/ADR-0001-passwordless-identity-and-first-party-oidc.md).
