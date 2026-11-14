@@ -8,14 +8,19 @@ This file is the repository-level engineering contract for FlowlessHub. It is se
 2. `README.md` — repository entry point and navigation.
 3. `AGENTS.md` — this engineering agreement.
 4. `CHECKPOINTS.md` — authoritative checkpoint sequence, state, evidence, and open decisions.
-5. The current checkpoint's slice, runbook, and acceptance record linked from `CHECKPOINTS.md`.
-6. Any applicable nested `AGENTS.md` and relevant versioned framework documentation before changing framework APIs.
+5. `docs/product/PRODUCT-STRATEGY.md`, `docs/architecture/DOMAIN-MODULE-ARCHITECTURE.md`, `docs/architecture/PRODUCTION-ENGINEERING-CHARTER.md`, and `docs/roadmap/PRODUCTION-GRADE-PSA-ROADMAP.md` — product and architecture source of truth.
+6. The current checkpoint's slice, runbook, and acceptance record linked from `CHECKPOINTS.md`.
+7. Any applicable nested `AGENTS.md` and relevant versioned framework documentation before changing framework APIs.
 
 Never infer that a checkpoint is accepted because it appears in a plan, a patch exists, or CI is green. Use the evidence in the checkpoint's acceptance record.
 
 ## Source-of-truth hierarchy
 
 - The current repository source/configuration defines what is implemented.
+- `PRODUCT-STRATEGY.md` defines the owner-approved product direction and complete capability target; it does not assert that planned capabilities are implemented.
+- `DOMAIN-MODULE-ARCHITECTURE.md` defines the target module ownership, relationship and invariant model; implementation changes require the applicable approved slice/ADR.
+- `PRODUCTION-ENGINEERING-CHARTER.md` defines the production-grade requirements for every slice.
+- `PRODUCTION-GRADE-PSA-ROADMAP.md` defines dependency order and the required slice contract; it does not override owner decisions or acceptance evidence.
 - An approved slice specification defines the scope and decisions for the active checkpoint.
 - `CHECKPOINTS.md` defines sequence and current checkpoint status; it must link to evidence rather than replace it.
 - The canonical Windows/VPS operating runbook defines where and how commands may run.
@@ -23,7 +28,7 @@ Never infer that a checkpoint is accepted because it appears in a plan, a patch 
 - Acceptance records define what was actually validated and accepted.
 - Explicit owner decisions override proposals. Unresolved decisions remain `OPEN / OWNER DECISION REQUIRED`.
 
-Do not refer to the ServicePilot / IT Services PSA Blueprint or Technical Architecture as FlowlessHub sources of truth. Those are unrelated project artifacts. Do not silently import requirements from them.
+Do not refer to the ServicePilot / IT Services PSA Blueprint or Technical Architecture under `documents/` as FlowlessHub sources of truth. Those are unrelated legacy project artifacts. Do not silently import requirements or decisions from them. The historical MVP roadmap is retired; use the production-grade roadmap.
 
 ## Mandatory environment separation
 
@@ -42,8 +47,8 @@ Canonical locations:
 
 | Environment | Shell | Working directory | Responsibility |
 |---|---|---|---|
-| Developer workstation | Windows PowerShell | `C:\Projects\saas\flowlesshub` | Source/docs edits, patch apply/review, Git, local tests, commit/push, CI inspection |
-| Developer workstation | Windows Git Bash | `/c/Projects/saas/flowlesshub` | Only explicitly Bash-specific workstation tasks; never production runtime |
+| Developer workstation | Windows PowerShell | `E:\workspace\flowlesshub` | Source/docs edits, patch apply/review, Git, local tests, commit/push, CI inspection |
+| Developer workstation | Windows Git Bash | `/e/workspace/flowlesshub` | Only explicitly Bash-specific workstation tasks; never production runtime |
 | Production host | Ubuntu Bash over SSH | `/opt/flowlesshub` | Runtime inspection and explicitly approved operational actions |
 | GitHub | UI / Actions | Repository and exact commit SHA | Pull requests, immutable CI evidence, release workflow |
 

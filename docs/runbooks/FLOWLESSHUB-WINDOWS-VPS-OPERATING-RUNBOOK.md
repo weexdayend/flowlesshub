@@ -3,10 +3,10 @@
 **Document class:** Mandatory project operating standard / continuity source of truth
 **Applies to:** Every FlowlessHub engineering checkpoint, patch, CI run, deployment, runtime inspection, backup, restore, and recovery operation
 **Repository:** `weexdayend/flowlesshub`
-**Windows checkout:** `C:\Projects\saas\flowlesshub`
+**Windows checkout:** `E:\workspace\flowlesshub`
 **VPS:** Ubuntu 24.04, `/opt/flowlesshub`
 **Last synchronized:** 14 November 2026
-**Current accepted repository baseline at synchronization:** `3def4d8747c12a7a334a448a46509559a2d812fb`
+**Current accepted repository baseline at synchronization:** `c6e31e03204de8035af9ef0bf2e0f0f187f8f297`
 
 > This is a permanent operating rule, not a one-checkpoint note. Every future continuation must read this document before giving commands or changing the repository/runtime. Update this file when an operating rule changes; do not create competing versions of the Windows/VPS rules.
 
@@ -16,8 +16,8 @@
 
 | Mandatory label | Environment | Shell | Working directory | Allowed responsibility |
 |---|---|---|---|---|
-| **[WINDOWS — POWERSHELL]** | Developer workstation | PowerShell | `C:\Projects\saas\flowlesshub` | Git, patch apply/review, source/docs edits, local tests, commit, push, CI inspection, evidence checksum |
-| **[WINDOWS — GIT BASH]** | Developer workstation | Git Bash | `/c/Projects/saas/flowlesshub` | Only commands explicitly requiring Bash on the workstation; still not the VPS |
+| **[WINDOWS — POWERSHELL]** | Developer workstation | PowerShell | `E:\workspace\flowlesshub` | Git, patch apply/review, source/docs edits, local tests, commit, push, CI inspection, evidence checksum |
+| **[WINDOWS — GIT BASH]** | Developer workstation | Git Bash | `/e/workspace/flowlesshub` | Only commands explicitly requiring Bash on the workstation; still not the VPS |
 | **[VPS — UBUNTU BASH]** | Production VPS | Bash over SSH | `/opt/flowlesshub` | Runtime inspection, deployment, backup, restore, recovery, systemd operations when specifically required |
 | **[GITHUB — WEB/CI]** | GitHub | GitHub UI / Actions | Repository / exact SHA | Pull requests, branch source, CI gates and immutable workflow evidence |
 
@@ -35,8 +35,8 @@ Never mix PowerShell and Bash in the same code block. Never make the user infer 
 
 ### Recognize the prompt
 
-- `PS C:\Projects\saas\flowlesshub>` means **Windows PowerShell**.
-- `user@machine MINGW64 /c/Projects/saas/flowlesshub` means **Windows Git Bash**.
+- `PS E:\workspace\flowlesshub>` means **Windows PowerShell**.
+- `user@machine MINGW64 /e/workspace/flowlesshub` means **Windows Git Bash**.
 - `ubuntu@<host>:/opt/flowlesshub$` means **VPS Ubuntu Bash**.
 
 Git Bash is still Windows. It is not a VPS shell.
@@ -173,13 +173,13 @@ Patch files and ZIPs belong outside the repository, normally in `$HOME\Downloads
 ### Step 1 — inspect checkout and current origin
 
 **[WINDOWS — POWERSHELL]**
-**Directory:** `C:\Projects\saas\flowlesshub`
+**Directory:** `E:\workspace\flowlesshub`
 **Mode:** Read-only except `git fetch` metadata update
 **Purpose:** Confirm the exact base before applying a patch.
 
 ```powershell
 $ErrorActionPreference = "Stop"
-Set-Location 'C:\Projects\saas\flowlesshub'
+Set-Location 'E:\workspace\flowlesshub'
 git status --short --branch
 git branch --show-current
 git rev-parse HEAD
